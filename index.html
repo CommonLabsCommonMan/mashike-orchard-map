@@ -230,19 +230,48 @@ function openSheet(item) {
   var badge = document.getElementById('sheet-cat-badge');
   badge.textContent = (LABELS[lang]||LABELS.ja)[cat] || cat;
   badge.style.background = COLORS[cat] || '#888';
-  document.getElementById('sheet-name').textContent     = (isJa ? item.name_ja     : item.name_en) || '';
-  document.getElementById('sheet-name-sub').textContent = (isJa ? item.name_en     : item.name_ja) || '';
-  document.getElementById('sheet-desc').textContent     = (isJa ? item.description_ja : item.description_en) || '';
-  document.getElementById('sheet-hours').textContent    = item.hours  ? (isJa?'時間: ':'Hours: ')  + item.hours  : '';
-  document.getElementById('sheet-season').textContent   = item.season ? (isJa?'季節: ':'Season: ') + item.season : '';
+
+  document.getElementById('sheet-name').textContent     = item.name_ja || '';
+  document.getElementById('sheet-name-sub').textContent = item.name_en || '';
+
+  // Build detail block
+  var desc = document.getElementById('sheet-desc');
+  var lines = [];
+  if (item.address)   lines.push('📍 ' + item.address);
+  if (item.phone)     lines.push('📞 ' + item.phone);
+  if (item.crops)     lines.push((isJa ? '🌱 作物: ' : '🌱 Crops: ')     + item.crops);
+  if (item.varieties) lines.push((isJa ? '🍒 品種: ' : '🍒 Varieties: ') + item.varieties);
+  if (item.picking && item.picking !== 'なし')
+                      lines.push((isJa ? '✋ 狩り: ' : '✋ Picking: ')   + item.picking);
+  if (item.products)  lines.push((isJa ? '🧃 加工品: ' : '🧃 Products: ') + item.products);
+  if (item.notes)     lines.push('📝 ' + item.notes);
+  desc.innerHTML = lines.map(function(l){
+    return '<div style="margin-bottom:6px;font-size:13px;line-height:1.5;color:#333">' + l + '</div>';
+  }).join('');
+
+  document.getElementById('sheet-hours').textContent  = item.hours  ? (isJa?'🕐 時間: ':'🕐 Hours: ')   + item.hours  : '';
+  document.getElementById('sheet-season').textContent = item.season ? (isJa?'📅 季節: ':'📅 Season: ') + item.season : '';
+
   var img = document.getElementById('sheet-image');
-  if (item.image_url) { img.src = item.image_url; img.style.display = 'block'; } else { img.style.display = 'none'; }
-  var tags = document.getElementById('sheet-tags'); tags.innerHTML = '';
-  if (item.tags) item.tags.split(',').forEach(function(t){ var c=document.createElement('span');c.className='tag-chip';c.textContent=t.trim();tags.appendChild(c); });
+  if (item.image_url) { img.src = item.image_url; img.style.display = 'block'; }
+  else { img.style.display = 'none'; }
+
+  var tagsDiv = document.getElementById('sheet-tags');
+  tagsDiv.innerHTML = '';
+  if (item.tags) {
+    item.tags.split(',').forEach(function(t) {
+      var c = document.createElement('span');
+      c.className = 'tag-chip';
+      c.textContent = t.trim();
+      tagsDiv.appendChild(c);
+    });
+  }
+
   var navBtn = document.getElementById('nav-btn');
   navBtn.href = item.google_maps_url ||
-    ('https://www.google.com/maps/dir/?api=1&destination='+item.lat+','+item.lng+'&travelmode=driving&dir_action=navigate');
+    ('https://www.google.com/maps/dir/?api=1&destination=' + item.lat + ',' + item.lng + '&travelmode=driving&dir_action=navigate');
   navBtn.style.display = item.lat ? 'block' : 'none';
+
   document.getElementById('bottom-sheet').classList.add('open');
   document.getElementById('sheet-backdrop').classList.add('open');
   map.flyTo({ center:[parseFloat(item.lng), parseFloat(item.lat)+0.003], duration:600 });
