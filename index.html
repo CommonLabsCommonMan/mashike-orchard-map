@@ -121,68 +121,46 @@ var MAPTILER_KEY = 'zqRM3ipv02HyL0fLF6Kw'; // leave '' to use flat OSM tiles
 var lang = 'ja', allData = [], activeCat = 'all', activeMarkers = [];
 var map, is3D = false, mapReady = false;
 
-var EMOJI = { orchard:'🍎', honey:'🍯', route:'🛤️', parking:'🅿️', toilet:'🚻', scenic:'🏔️' };
-var COLORS = { orchard:'#2e7d50', honey:'#e8a000', route:'#1565c0', parking:'#555', toilet:'#6a1b9a', scenic:'#bf360c' };
+v// Crop name → emoji mapping (Japanese crop names from the CSV)
+var CROP_EMOJI = {
+  'サクランボ': '🍒',
+  'リンゴ':     '🍎',
+  '梨':         '🍐',
+  'ブドウ':     '🍇',
+  '桃':         '🍑',
+  'プルーン':   '🟣',
+  'プラム':     '💜',
+  'イチゴ':     '🍓',
+  'ブルーベリー':'🫐',
+  'スイカ':     '🍉',
+  'メロン':     '🍈',
+  'ミカン':     '🍊',
+  'レモン':     '🍋'
+};
+
+var COLORS = {
+  orchard:'#2e7d50', honey:'#e8a000', route:'#1565c0',
+  parking:'#555', toilet:'#6a1b9a', scenic:'#bf360c'
+};
 var LABELS = {
   ja:{ all:'すべて', orchard:'果樹園', honey:'養蜂園', route:'回廊', parking:'駐車場', toilet:'トイレ', scenic:'見どころ' },
   en:{ all:'All', orchard:'Orchard', honey:'Honey Farm', route:'Route', parking:'Parking', toilet:'Toilet', scenic:'Scenic' }
 };
 var ICONS = { all:'🗺', orchard:'🍎', honey:'🍯', route:'🛤', parking:'🅿', toilet:'🚻', scenic:'🏔' };
 
-function buildStyle() {
-  if (MAPTILER_KEY && MAPTILER_KEY !== 'YOUR_MAPTILER_KEY_HERE') {
-    return 'https://api.maptiler.com/maps/outdoor-v2/style.json?key=' + MAPTILER_KEY;
-  }
-  return {
-    version: 8,
-    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-    sources: { osm: { type:'raster', tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize:256, attribution:'© OpenStreetMap contributors' } },
-    layers: [{ id:'osm', type:'raster', source:'osm' }]
-  };
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  map = new maplibregl.Map({
-    container: 'map',
-    style: buildStyle(),
-    center: [141.508, 43.859],
-    zoom: 13,
-    pitch: 0,
-    bearing: 0,
-    antialias: true,
-    attributionControl: false
-  });
-
-  map.addControl(new maplibregl.NavigationControl({ visualizePitch:true }), 'top-left');
-  map.addControl(new maplibregl.AttributionControl({ compact:true }), 'bottom-right');
-
-  map.on('load', function() {
-    if (MAPTILER_KEY && MAPTILER_KEY !== 'YOUR_MAPTILER_KEY_HERE') {
-      map.addSource('terrain', {
-        type:'raster-dem',
-        url:'https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=' + MAPTILER_KEY,
-        tileSize:256
-      });
+// Build multi-emoji marker string from crops column
+function getCropEmojis(cropsStr) {
+  if (!cropsStr) return '🌿';
+  var seen = {};
+  var result = '';
+  cropsStr.split(',').forEach(function(c) {
+    var crop = c.trim();
+    if (CROP_EMOJI[crop] && !seen[crop]) {
+      seen[crop] = true;
+      result += CROP_EMOJI[crop];
     }
-    mapReady = true;
-    loadData();
   });
-});
-
-function toggle3D() {
-  is3D = !is3D;
-  var btn = document.getElementById('tilt-btn');
-  if (is3D) {
-    if (mapReady && MAPTILER_KEY && MAPTILER_KEY !== 'YOUR_MAPTILER_KEY_HERE') {
-      map.setTerrain({ source:'terrain', exaggeration:2.0 });
-    }
-    map.easeTo({ pitch:55, bearing:-15, duration:1000 });
-    btn.style.background = '#2e7d50'; btn.style.color = '#fff';
-  } else {
-    if (mapReady) map.setTerrain(null);
-    map.easeTo({ pitch:0, bearing:0, duration:800 });
-    btn.style.background = '#fff'; btn.style.color = '#1a1a1a';
-  }
+  return result || '🌿';
 }
 
 function renderMarkers(data) {
@@ -191,10 +169,32 @@ function renderMarkers(data) {
   data.forEach(function(item) {
     var lat = parseFloat(item.lat), lng = parseFloat(item.lng);
     if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+
+    var emojiStr = (item.category === 'orchard' && item.crops)
+      ? getCropEmojis(item.crops)
+      : (ICONS[item.category] || '📍');
+
     var el = document.createElement('div');
-    el.className = 'emoji-marker';
-    el.textContent = EMOJI[item.category] || '📍';
-    el.title = (lang === 'ja' ? item.name_ja : item.name_en) || '';
+    el.style.cssText = [
+      'display:flex',
+      'flex-wrap:wrap',
+      'max-width:56px',
+      'line-height:1.1',
+      'font-size:20px',
+      'cursor:pointer',
+      'filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))',
+      'transition:transform .15s',
+      'user-select:none',
+      'background:rgba(255,255,255,0.82)',
+      'border-radius:10px',
+      'padding:3px 4px',
+      'box-shadow:0 1px 4px rgba(0,0,0,0.18)'
+    ].join(';');
+    el.textContent = emojiStr;
+    el.title = item.name_ja || item.name_en || '';
+    el.onmouseenter = function(){ el.style.transform='scale(1.2)'; };
+    el.onmouseleave = function(){ el.style.transform='scale(1)'; };
+
     var marker = new maplibregl.Marker({ element:el, anchor:'bottom' })
       .setLngLat([lng, lat]).addTo(map);
     el.addEventListener('click', function(){ openSheet(item); });
@@ -225,48 +225,99 @@ function loadData() {
 }
 
 function openSheet(item) {
-  var isJa = lang === 'ja';
   var cat = item.category || 'orchard';
   var badge = document.getElementById('sheet-cat-badge');
   badge.textContent = (LABELS[lang]||LABELS.ja)[cat] || cat;
   badge.style.background = COLORS[cat] || '#888';
 
+  // Farm name
   document.getElementById('sheet-name').textContent     = item.name_ja || '';
   document.getElementById('sheet-name-sub').textContent = item.name_en || '';
 
-  // Build detail block
+  // Build card content
   var desc = document.getElementById('sheet-desc');
-  var lines = [];
-  if (item.address)   lines.push('📍 ' + item.address);
-  if (item.phone)     lines.push('📞 ' + item.phone);
-  if (item.crops)     lines.push((isJa ? '🌱 作物: ' : '🌱 Crops: ')     + item.crops);
-  if (item.varieties) lines.push((isJa ? '🍒 品種: ' : '🍒 Varieties: ') + item.varieties);
-  if (item.picking && item.picking !== 'なし')
-                      lines.push((isJa ? '✋ 狩り: ' : '✋ Picking: ')   + item.picking);
-  if (item.products)  lines.push((isJa ? '🧃 加工品: ' : '🧃 Products: ') + item.products);
-  if (item.notes)     lines.push('📝 ' + item.notes);
-  desc.innerHTML = lines.map(function(l){
-    return '<div style="margin-bottom:6px;font-size:13px;line-height:1.5;color:#333">' + l + '</div>';
-  }).join('');
+  var html = '';
 
-  document.getElementById('sheet-hours').textContent  = item.hours  ? (isJa?'🕐 時間: ':'🕐 Hours: ')   + item.hours  : '';
-  document.getElementById('sheet-season').textContent = item.season ? (isJa?'📅 季節: ':'📅 Season: ') + item.season : '';
-
-  var img = document.getElementById('sheet-image');
-  if (item.image_url) { img.src = item.image_url; img.style.display = 'block'; }
-  else { img.style.display = 'none'; }
-
-  var tagsDiv = document.getElementById('sheet-tags');
-  tagsDiv.innerHTML = '';
-  if (item.tags) {
-    item.tags.split(',').forEach(function(t) {
-      var c = document.createElement('span');
-      c.className = 'tag-chip';
-      c.textContent = t.trim();
-      tagsDiv.appendChild(c);
+  // Crops with emojis
+  if (item.crops) {
+    html += '<div style="margin-bottom:10px">';
+    html += '<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">'
+          + (lang==='ja'?'作付け作物':'Crops') + '</div>';
+    var cropRow = '';
+    item.crops.split(',').forEach(function(c) {
+      var crop = c.trim();
+      var em = CROP_EMOJI[crop] || '🌿';
+      cropRow += '<span style="display:inline-flex;align-items:center;gap:3px;background:#f3f9f5;border:1px solid #c8e6c9;border-radius:20px;padding:3px 9px;font-size:13px;margin:3px 3px 0 0">'
+               + em + ' ' + crop + '</span>';
     });
+    html += cropRow + '</div>';
   }
 
+  // Varieties in colored font
+  if (item.varieties) {
+    html += '<div style="margin-bottom:10px">';
+    html += '<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">'
+          + (lang==='ja'?'品種':'Varieties') + '</div>';
+    var varRow = '';
+    item.varieties.split(',').forEach(function(v, i) {
+      // Rotate through 4 accent colors
+      var palette = ['#1565c0','#6a1b9a','#bf360c','#2e7d50'];
+      var col = palette[i % palette.length];
+      varRow += '<span style="font-size:12px;color:' + col + ';font-weight:600;margin-right:6px;white-space:nowrap">'
+              + v.trim() + '</span>';
+    });
+    html += '<div style="line-height:2">' + varRow + '</div></div>';
+  }
+
+  // Picking indicator
+  if (item.picking) {
+    var canPick = item.picking !== 'なし' && item.picking.trim() !== '';
+    var pickColor = canPick ? '#2e7d50' : '#999';
+    var pickIcon  = canPick ? '✅' : '❌';
+    var pickLabel = canPick
+      ? (lang==='ja' ? '収穫体験できます: ' : 'Picking available: ') + item.picking
+      : (lang==='ja' ? '収穫体験なし' : 'No picking');
+    html += '<div style="display:flex;align-items:center;gap:6px;background:' + (canPick?'#e8f5e9':'#f5f5f5') + ';border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:13px;color:' + pickColor + ';font-weight:700">'
+          + pickIcon + ' ' + pickLabel + '</div>';
+  }
+
+  // Processed products
+  if (item.products && item.products.trim()) {
+    html += '<div style="margin-bottom:10px">';
+    html += '<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">'
+          + (lang==='ja'?'加工品・販売品':'Products') + '</div>';
+    var prodRow = '';
+    item.products.split(',').forEach(function(p) {
+      prodRow += '<span style="display:inline-flex;align-items:center;gap:3px;background:#fff8e1;border:1px solid #ffe082;border-radius:20px;padding:3px 9px;font-size:13px;margin:3px 3px 0 0">'
+               + '🧃 ' + p.trim() + '</span>';
+    });
+    html += prodRow + '</div>';
+  }
+
+  // Address and phone
+  if (item.address) {
+    html += '<div style="font-size:12px;color:#666;margin-bottom:4px">📍 ' + item.address + '</div>';
+  }
+  if (item.phone) {
+    html += '<div style="font-size:12px;color:#666;margin-bottom:4px">📞 <a href="tel:' + item.phone.replace(/[^0-9\-]/g,'') + '" style="color:#1565c0">' + item.phone + '</a></div>';
+  }
+  if (item.season) {
+    html += '<div style="font-size:12px;color:#666;margin-bottom:4px">📅 ' + item.season + '</div>';
+  }
+
+  desc.innerHTML = html;
+
+  // Hide old separate fields (now embedded in desc)
+  document.getElementById('sheet-hours').textContent  = '';
+  document.getElementById('sheet-season').textContent = '';
+  document.getElementById('sheet-tags').innerHTML     = '';
+
+  // Image
+  var img = document.getElementById('sheet-image');
+  if (item.image_url) { img.src = item.image_url; img.style.display='block'; }
+  else { img.style.display='none'; }
+
+  // Navigate button
   var navBtn = document.getElementById('nav-btn');
   navBtn.href = item.google_maps_url ||
     ('https://www.google.com/maps/dir/?api=1&destination=' + item.lat + ',' + item.lng + '&travelmode=driving&dir_action=navigate');
