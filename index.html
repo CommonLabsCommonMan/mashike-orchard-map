@@ -22,6 +22,38 @@
   --toilet: #6a1b9a;
   --scenic: #bf360c;
 }
+  [data-theme="dark"] {
+  --green: #4caf78;
+  --green-dark: #2e7d50;
+  --surface: #1c1b19;
+  --text: #e0dedd;
+  --muted: #9a9896;
+  --border: #2e2d2b;
+  --orchard: #4caf78;
+  --honey: #ffc340;
+  --route: #5b9bd5;
+  --parking: #aaa;
+  --toilet: #b57bee;
+  --scenic: #e8805a;
+}
+[data-theme="dark"] body { background:#141312; }
+[data-theme="dark"] #header { background:#1a3d2b; }
+[data-theme="dark"] #filter-bar { background:#1c1b19; border-bottom-color:#2e2d2b; }
+[data-theme="dark"] .chip { background:#1c1b19; }
+[data-theme="dark"] #bottom-sheet { background:#1c1b19; box-shadow:0 -4px 32px rgba(0,0,0,.5); }
+[data-theme="dark"] .tag-chip { background:#2a2927; color:#aaa; }
+[data-theme="dark"] #close-btn { background:#2a2927; color:#aaa; }
+[data-theme="dark"] #tilt-btn,
+[data-theme="dark"] #locate-btn { background:#1c1b19; border-color:#3a3937; color:#e0dedd; }
+[data-theme="dark"] .maplibregl-ctrl-group { background:#1c1b19 !important; }
+[data-theme="dark"] .maplibregl-ctrl button { background-color:#1c1b19 !important; }
+[data-theme="dark"] .maplibregl-ctrl button span { filter: invert(1); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --green:#4caf78; --green-dark:#2e7d50; --surface:#1c1b19; --text:#e0dedd;
+    --muted:#9a9896; --border:#2e2d2b;
+  }
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;font-family:'Noto Sans JP','Hiragino Sans',sans-serif;color:var(--text)}
 body{display:flex;flex-direction:column}
@@ -77,7 +109,7 @@ body{display:flex;flex-direction:column}
 
 <div id="header">
   <h1>増毛オーチャードマップ <span>Mashike Orchard Map</span></h1>
-  <button id="lang-toggle" onclick="toggleLang()">EN</button>
+  <div style="display:flex;gap:8px;align-items:center">   <button id="theme-toggle" onclick="toggleTheme()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:4px 10px;border-radius:20px;font-size:14px;cursor:pointer" title="Dark/Light mode">🌙</button>   <button id="lang-toggle" onclick="toggleLang()">EN</button> </div>
 </div>
 
 <div id="filter-bar">
@@ -233,24 +265,31 @@ function renderMarkers(data) {
 
     var el = document.createElement('div');
     el.style.cssText = [
-      'display:flex',
-      'flex-wrap:wrap',
-      'max-width:56px',
-      'line-height:1.1',
-      'font-size:20px',
+      'display:grid',
+      'grid-template-columns:repeat(3,1fr)',
+      'width:66px',
+      'line-height:1',
+      'font-size:18px',
       'cursor:pointer',
-      'filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))',
+      'filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))',
       'transition:transform .15s',
+      'transform-origin:bottom center',
       'user-select:none',
-      'background:rgba(255,255,255,0.82)',
+      'background:rgba(255,255,255,0.92)',
       'border-radius:10px',
-      'padding:3px 4px',
-      'box-shadow:0 1px 4px rgba(0,0,0,0.18)'
+      'padding:4px 3px 2px 3px',
+      'box-shadow:0 2px 8px rgba(0,0,0,0.22)',
+      'pointer-events:auto',
+      'text-align:center'
     ].join(';');
     el.textContent = emojiStr;
+    var arrow = document.createElement('div');
+    arrow.style.cssText = 'width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid rgba(255,255,255,0.92);margin:0 auto;filter:drop-shadow(0 2px 2px rgba(0,0,0,.2))';
+    el.appendChild(arrow);
+
     el.title = item.name_ja || item.name_en || '';
-    el.onmouseenter = function(){ el.style.transform='scale(1.2)'; };
-    el.onmouseleave = function(){ el.style.transform='scale(1)'; };
+    el.onmouseenter = function(){ el.style.transform='scale(1.2)'; el.style.transformOrigin='bottom center'; };
+el.onmouseleave = function(){ el.style.transform='scale(1)'; };
 
     var marker = new maplibregl.Marker({ element:el, anchor:'bottom' })
       .setLngLat([lng, lat]).addTo(map);
@@ -367,7 +406,33 @@ function openSheet(item) {
     html += '<div style="font-size:12px;color:#666;margin-bottom:4px">📞 <a href="tel:' + item.phone.replace(/[^0-9\-]/g,'') + '" style="color:#1565c0">' + item.phone + '</a></div>';
   }
   if (item.season) {
-    html += '<div style="font-size:12px;color:#666;margin-bottom:4px">📅 ' + item.season + '</div>';
+    // Parse season string like "6月〜10月" or "6月, 7月, 8月" into month tabs
+    var ALL_MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    var activeMonths = {};
+    // Handle range format "6月〜10月"
+    var rangeMatch = item.season.match(/(\d+)月[〜~～\-](\d+)月/);
+    if (rangeMatch) {
+      var start = parseInt(rangeMatch[1]), end = parseInt(rangeMatch[2]);
+      for (var m = start; m <= end; m++) activeMonths[m+'月'] = true;
+    } else {
+      // Handle comma-separated or single month
+      item.season.split(/[,、]/).forEach(function(s) {
+        var mm = s.trim().match(/(\d+)月/);
+        if (mm) activeMonths[mm[0]] = true;
+      });
+    }
+    html += '<div style="margin-bottom:12px">';
+    html += '<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📅 ' + (lang==='ja'?'営業期間':'Open Season') + '</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+    ALL_MONTHS.forEach(function(mo) {
+      var on = activeMonths[mo];
+      html += '<span style="padding:3px 8px;border-radius:20px;font-size:12px;font-weight:700;'
+            + (on
+               ? 'background:#2e7d50;color:#fff;box-shadow:0 1px 4px rgba(46,125,80,.35)'
+               : 'background:#f0f0f0;color:#bbb')
+            + '">' + mo + '</span>';
+    });
+    html += '</div></div>';
   }
 
   desc.innerHTML = html;
@@ -397,7 +462,28 @@ function closeSheet() {
   document.getElementById('bottom-sheet').classList.remove('open');
   document.getElementById('sheet-backdrop').classList.remove('open');
 }
+var currentTheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+document.documentElement.setAttribute('data-theme', currentTheme);
+document.getElementById('theme-toggle') && (document.getElementById('theme-toggle').textContent = currentTheme === 'dark' ? '☀️' : '🌙');
 
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  document.getElementById('theme-toggle').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+
+  // Swap map tiles for dark/light
+  if (!map) return;
+  var darkStyle = {
+    version: 8,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sources: { osm: { type:'raster', tiles:['https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png'], tileSize:256, attribution:'© Stadia Maps © OpenStreetMap contributors' } },
+    layers: [{ id:'osm', type:'raster', source:'osm' }]
+  };
+  var lightStyle = buildStyle();
+  try {
+    map.setStyle(currentTheme === 'dark' ? darkStyle : lightStyle);
+  } catch(e) {}
+}
 function toggleLang() {
   lang = lang === 'ja' ? 'en' : 'ja';
   document.getElementById('lang-toggle').textContent = lang === 'ja' ? 'EN' : '日本語';
