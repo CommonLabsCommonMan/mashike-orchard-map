@@ -4,129 +4,68 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>増毛オーチャードマップ | Mashike Orchard Map</title>
-//unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-//fonts.googleapis.com">
-//fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --color-primary: #2e7d50;
-  --color-primary-dark: #1b5e34;
-  --color-surface: #ffffff;
-  --color-text: #1a1a1a;
-  --color-text-muted: #666;
-  --color-border: #ddd;
-  --color-orchard: #2e7d50;
-  --color-honey: #e8a000;
-  --color-route: #1565c0;
-  --color-parking: #555;
-  --color-toilet: #6a1b9a;
-  --color-scenic: #bf360c;
+  --green: #2e7d50;
+  --green-dark: #1b5e34;
+  --surface: #fff;
+  --text: #1a1a1a;
+  --muted: #666;
+  --border: #ddd;
+  --orchard: #2e7d50;
+  --honey: #e8a000;
+  --route: #1565c0;
+  --parking: #555;
+  --toilet: #6a1b9a;
+  --scenic: #bf360c;
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif; }
-
-body { display: flex; flex-direction: column; color: var(--color-text); }
-
-#header {
-  background: var(--color-primary); color: white;
-  padding: 10px 16px; display: flex; align-items: center;
-  justify-content: space-between; flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1001;
-}
-#header h1 { font-size: 16px; font-weight: 700; line-height: 1.3; }
-#header h1 span { display: block; font-size: 11px; font-weight: 400; opacity: 0.85; }
-
-#header-right { display: flex; gap: 8px; align-items: center; }
-.header-btn {
-  background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
-  color: white; padding: 4px 10px; border-radius: 20px;
-  font-size: 12px; cursor: pointer; font-family: inherit;
-}
-
-#filter-bar {
-  background: var(--color-surface); padding: 8px 12px;
-  display: flex; gap: 8px; overflow-x: auto; flex-shrink: 0;
-  border-bottom: 1px solid var(--color-border); scrollbar-width: none;
-}
-#filter-bar::-webkit-scrollbar { display: none; }
-
-.chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 12px; border-radius: 20px; border: 1.5px solid;
-  font-size: 12px; white-space: nowrap; cursor: pointer;
-  transition: all 0.15s; background: white; font-family: inherit;
-}
-.chip.active { color: white !important; }
-.chip[data-cat="all"] { border-color:#333;color:#333; } .chip[data-cat="all"].active { background:#333; }
-.chip[data-cat="orchard"] { border-color:var(--color-orchard);color:var(--color-orchard); } .chip[data-cat="orchard"].active { background:var(--color-orchard); }
-.chip[data-cat="honey"] { border-color:var(--color-honey);color:var(--color-honey); } .chip[data-cat="honey"].active { background:var(--color-honey); }
-.chip[data-cat="route"] { border-color:var(--color-route);color:var(--color-route); } .chip[data-cat="route"].active { background:var(--color-route); }
-.chip[data-cat="parking"] { border-color:var(--color-parking);color:var(--color-parking); } .chip[data-cat="parking"].active { background:var(--color-parking); }
-.chip[data-cat="toilet"] { border-color:var(--color-toilet);color:var(--color-toilet); } .chip[data-cat="toilet"].active { background:var(--color-toilet); }
-.chip[data-cat="scenic"] { border-color:var(--color-scenic);color:var(--color-scenic); } .chip[data-cat="scenic"].active { background:var(--color-scenic); }
-
-#map { flex: 1; min-height: 0; width: 100%; }
-
-/* MapLibre custom controls */
-.maplibregl-ctrl-group { border-radius: 8px !important; }
-.maplibregl-ctrl button { border-radius: 8px !important; }
-
-/* 3D toggle button */
-#tilt-btn {
-  position: absolute; bottom: 80px; right: 10px; z-index: 500;
-  background: white; border: 1px solid var(--color-border);
-  border-radius: 8px; padding: 6px 10px; font-size: 11px; font-weight: 700;
-  cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  font-family: inherit; color: var(--color-text);
-  line-height: 1.3; text-align: center;
-}
-
-#locate-btn {
-  position: absolute; bottom: 130px; right: 10px; z-index: 500;
-  background: white; border: 1px solid var(--color-border);
-  border-radius: 50%; width: 36px; height: 36px; font-size: 18px;
-  cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  display: flex; align-items: center; justify-content: center;
-}
-
-/* Emoji marker */
-.emoji-marker {
-  font-size: 28px; line-height: 1; cursor: pointer;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-  transition: transform 0.15s;
-  user-select: none;
-}
-.emoji-marker:hover { transform: scale(1.2); }
-
-/* Bottom sheet */
-#sheet-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:1100; }
-#bottom-sheet {
-  position:fixed; bottom:0; left:0; right:0;
-  background:var(--color-surface); border-radius:18px 18px 0 0;
-  padding:20px 20px 32px; max-height:70dvh; overflow-y:auto;
-  z-index:1200; transform:translateY(100%);
-  transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);
-  box-shadow:0 -4px 32px rgba(0,0,0,0.18);
-}
-#bottom-sheet.open { transform:translateY(0); }
-#sheet-backdrop.open { display:block; }
-.sheet-handle { width:40px;height:4px;background:var(--color-border);border-radius:2px;margin:0 auto 16px; }
-#sheet-category-badge { display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;color:white;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px; }
-#sheet-name { font-size:20px;font-weight:700;margin-bottom:4px; }
-#sheet-name-sub { font-size:13px;color:var(--color-text-muted);margin-bottom:12px; }
-#sheet-image { width:100%;height:180px;object-fit:cover;border-radius:10px;margin-bottom:12px;display:none;background:#eee; }
-#sheet-desc { font-size:14px;line-height:1.65;color:#333;margin-bottom:8px; }
-#sheet-hours { font-size:13px;color:var(--color-text-muted);margin-bottom:4px; }
-#sheet-season { font-size:13px;color:var(--color-text-muted);margin-bottom:16px; }
-#sheet-tags { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px; }
-.tag-chip { background:#f0f0f0;border-radius:12px;padding:3px 10px;font-size:12px;color:#555; }
-#navigate-btn { display:block;width:100%;padding:14px;background:var(--color-primary);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;text-align:center;text-decoration:none;margin-bottom:10px; }
-#navigate-btn:active { background:var(--color-primary-dark); }
-#close-sheet-btn { display:block;width:100%;padding:12px;background:#f5f5f5;color:#555;border:none;border-radius:12px;font-size:14px;font-family:inherit;cursor:pointer; }
-
-#loading { position:fixed;inset:0;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:12px;font-size:14px;color:var(--color-text-muted); }
-.spinner { width:36px;height:36px;border:3px solid #e0e0e0;border-top-color:var(--color-primary);border-radius:50%;animation:spin 0.7s linear infinite; }
-@keyframes spin { to { transform:rotate(360deg); } }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Noto Sans JP','Hiragino Sans',sans-serif;color:var(--text)}
+body{display:flex;flex-direction:column}
+#header{background:var(--green);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:1001}
+#header h1{font-size:16px;font-weight:700;line-height:1.3}
+#header h1 span{display:block;font-size:11px;font-weight:400;opacity:.85}
+#lang-toggle{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;cursor:pointer;font-family:inherit}
+#filter-bar{background:var(--surface);padding:8px 12px;display:flex;gap:8px;overflow-x:auto;flex-shrink:0;border-bottom:1px solid var(--border);scrollbar-width:none}
+#filter-bar::-webkit-scrollbar{display:none}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;border:1.5px solid;font-size:12px;white-space:nowrap;cursor:pointer;transition:all .15s;background:#fff;font-family:inherit}
+.chip.active{color:#fff!important}
+.chip[data-cat=all]{border-color:#333;color:#333}.chip[data-cat=all].active{background:#333}
+.chip[data-cat=orchard]{border-color:var(--orchard);color:var(--orchard)}.chip[data-cat=orchard].active{background:var(--orchard)}
+.chip[data-cat=honey]{border-color:var(--honey);color:var(--honey)}.chip[data-cat=honey].active{background:var(--honey)}
+.chip[data-cat=route]{border-color:var(--route);color:var(--route)}.chip[data-cat=route].active{background:var(--route)}
+.chip[data-cat=parking]{border-color:var(--parking);color:var(--parking)}.chip[data-cat=parking].active{background:var(--parking)}
+.chip[data-cat=toilet]{border-color:var(--toilet);color:var(--toilet)}.chip[data-cat=toilet].active{background:var(--toilet)}
+.chip[data-cat=scenic]{border-color:var(--scenic);color:var(--scenic)}.chip[data-cat=scenic].active{background:var(--scenic)}
+#map{flex:1;min-height:0;width:100%;position:relative}
+.maplibregl-ctrl-group{border-radius:8px!important}
+#tilt-btn{position:absolute;bottom:80px;right:10px;z-index:500;background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15);font-family:inherit;line-height:1.3;text-align:center}
+#locate-btn{position:absolute;bottom:130px;right:10px;z-index:500;background:#fff;border:1px solid var(--border);border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center}
+.emoji-marker{font-size:30px;line-height:1;cursor:pointer;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));transition:transform .15s;user-select:none;display:block}
+.emoji-marker:hover{transform:scale(1.25)}
+#sheet-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1100}
+#bottom-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:18px 18px 0 0;padding:20px 20px 32px;max-height:70dvh;overflow-y:auto;z-index:1200;transform:translateY(100%);transition:transform .3s cubic-bezier(.16,1,.3,1);box-shadow:0 -4px 32px rgba(0,0,0,.18)}
+#bottom-sheet.open{transform:translateY(0)}
+#sheet-backdrop.open{display:block}
+.sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+#sheet-cat-badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;color:#fff;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+#sheet-name{font-size:20px;font-weight:700;margin-bottom:4px}
+#sheet-name-sub{font-size:13px;color:var(--muted);margin-bottom:12px}
+#sheet-image{width:100%;height:180px;object-fit:cover;border-radius:10px;margin-bottom:12px;display:none;background:#eee}
+#sheet-desc{font-size:14px;line-height:1.65;color:#333;margin-bottom:8px}
+#sheet-hours{font-size:13px;color:var(--muted);margin-bottom:4px}
+#sheet-season{font-size:13px;color:var(--muted);margin-bottom:16px}
+#sheet-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.tag-chip{background:#f0f0f0;border-radius:12px;padding:3px 10px;font-size:12px;color:#555}
+#nav-btn{display:block;width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;text-align:center;text-decoration:none;margin-bottom:10px}
+#nav-btn:active{background:var(--green-dark)}
+#close-btn{display:block;width:100%;padding:12px;background:#f5f5f5;color:#555;border:none;border-radius:12px;font-size:14px;font-family:inherit;cursor:pointer}
+#loading{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:12px;font-size:14px;color:var(--muted)}
+.spinner{width:36px;height:36px;border:3px solid #e0e0e0;border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -138,30 +77,28 @@ body { display: flex; flex-direction: column; color: var(--color-text); }
 
 <div id="header">
   <h1>増毛オーチャードマップ <span>Mashike Orchard Map</span></h1>
-  <div id="header-right">
-    <button class="header-btn" id="lang-toggle" onclick="toggleLang()">EN</button>
-  </div>
+  <button id="lang-toggle" onclick="toggleLang()">EN</button>
 </div>
 
 <div id="filter-bar">
-  <button class="chip active" data-cat="all" onclick="filterCategory('all')">🗺 すべて</button>
-  <button class="chip" data-cat="orchard" onclick="filterCategory('orchard')">🍎 果樹園</button>
-  <button class="chip" data-cat="honey" onclick="filterCategory('honey')">🍯 養蜂園</button>
-  <button class="chip" data-cat="route" onclick="filterCategory('route')">🛤 回廊</button>
-  <button class="chip" data-cat="parking" onclick="filterCategory('parking')">🅿 駐車場</button>
-  <button class="chip" data-cat="toilet" onclick="filterCategory('toilet')">🚻 トイレ</button>
-  <button class="chip" data-cat="scenic" onclick="filterCategory('scenic')">🏔 見どころ</button>
+  <button class="chip active" data-cat="all"     onclick="filterCat('all')">🗺 すべて</button>
+  <button class="chip"        data-cat="orchard" onclick="filterCat('orchard')">🍎 果樹園</button>
+  <button class="chip"        data-cat="honey"   onclick="filterCat('honey')">🍯 養蜂園</button>
+  <button class="chip"        data-cat="route"   onclick="filterCat('route')">🛤 回廊</button>
+  <button class="chip"        data-cat="parking" onclick="filterCat('parking')">🅿 駐車場</button>
+  <button class="chip"        data-cat="toilet"  onclick="filterCat('toilet')">🚻 トイレ</button>
+  <button class="chip"        data-cat="scenic"  onclick="filterCat('scenic')">🏔 見どころ</button>
 </div>
 
 <div id="map">
-  <button id="tilt-btn" onclick="toggle3D()">🏔<br>3D</button>
+  <button id="tilt-btn"   onclick="toggle3D()">🏔<br>3D</button>
   <button id="locate-btn" onclick="locateMe()" title="現在地">📍</button>
 </div>
 
 <div id="sheet-backdrop" onclick="closeSheet()"></div>
 <div id="bottom-sheet">
   <div class="sheet-handle"></div>
-  <span id="sheet-category-badge"></span>
+  <span id="sheet-cat-badge"></span>
   <div id="sheet-name"></div>
   <div id="sheet-name-sub"></div>
   <img id="sheet-image" alt="" loading="lazy">
@@ -169,84 +106,66 @@ body { display: flex; flex-direction: column; color: var(--color-text); }
   <div id="sheet-hours"></div>
   <div id="sheet-season"></div>
   <div id="sheet-tags"></div>
-  <a id="navigate-btn" target="_blank" rel="noopener noreferrer">🗺 ここへナビ / Navigate Here</a>
-  <button id="close-sheet-btn" onclick="closeSheet()">閉じる / Close</button>
+  <a id="nav-btn" target="_blank" rel="noopener noreferrer">🗺 ここへナビ / Navigate Here</a>
+  <button id="close-btn" onclick="closeSheet()">閉じる / Close</button>
 </div>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-
 <script>
-// ── EDIT THESE ──────────────────────────────────────────────
-var GAS_URL     = 'https://script.google.com/macros/s/AKfycbyoK-Z6nF7RgtkQEA-kwJxSYH_6eplPJNyXArynC-sxaHu9Ze4IapzOLInha1_sXZntbg/exec';
-var MAPTILER_KEY = 'zqRM3ipv02HyL0fLF6Kw'; // free tier, no credit card needed
-var DEFAULT_LAT  = 43.859;
-var DEFAULT_LNG  = 141.508;
-var DEFAULT_ZOOM = 13;
-// ────────────────────────────────────────────────────────────
+// =============================================
+// EDIT THESE TWO VALUES
+var GAS_URL      = 'https://script.google.com/macros/s/AKfycbyoK-Z6nF7RgtkQEA-kwJxSYH_6eplPJNyXArynC-sxaHu9Ze4IapzOLInha1_sXZntbg/exec';
+var MAPTILER_KEY = 'zqRM3ipv02HyL0fLF6Kw'; // leave '' to use flat OSM tiles
+// =============================================
 
-var lang = 'ja';
-var allData = [];
-var activeCategory = 'all';
-var map;
-var is3D = false;
-var mapReady = false;
+var lang = 'ja', allData = [], activeCat = 'all', activeMarkers = [];
+var map, is3D = false, mapReady = false;
 
-var CATEGORY_EMOJI = {
-  orchard:'🍎', honey:'🍯', route:'🛤️', parking:'🅿️', toilet:'🚻', scenic:'🏔️'
+var EMOJI = { orchard:'🍎', honey:'🍯', route:'🛤️', parking:'🅿️', toilet:'🚻', scenic:'🏔️' };
+var COLORS = { orchard:'#2e7d50', honey:'#e8a000', route:'#1565c0', parking:'#555', toilet:'#6a1b9a', scenic:'#bf360c' };
+var LABELS = {
+  ja:{ all:'すべて', orchard:'果樹園', honey:'養蜂園', route:'回廊', parking:'駐車場', toilet:'トイレ', scenic:'見どころ' },
+  en:{ all:'All', orchard:'Orchard', honey:'Honey Farm', route:'Route', parking:'Parking', toilet:'Toilet', scenic:'Scenic' }
 };
-var CATEGORY_COLORS = {
-  orchard:'#2e7d50', honey:'#e8a000', route:'#1565c0',
-  parking:'#555', toilet:'#6a1b9a', scenic:'#bf360c'
-};
-var CATEGORY_LABELS = {
-  ja: { orchard:'果樹園', honey:'養蜂園', route:'回廊', parking:'駐車場', toilet:'トイレ', scenic:'見どころ' },
-  en: { orchard:'Orchard', honey:'Honey Farm', route:'Route', parking:'Parking', toilet:'Toilet', scenic:'Scenic' }
-};
+var ICONS = { all:'🗺', orchard:'🍎', honey:'🍯', route:'🛤', parking:'🅿', toilet:'🚻', scenic:'🏔' };
+
+function buildStyle() {
+  if (MAPTILER_KEY && MAPTILER_KEY !== 'YOUR_MAPTILER_KEY_HERE') {
+    return 'https://api.maptiler.com/maps/outdoor-v2/style.json?key=' + MAPTILER_KEY;
+  }
+  return {
+    version: 8,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sources: { osm: { type:'raster', tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize:256, attribution:'© OpenStreetMap contributors' } },
+    layers: [{ id:'osm', type:'raster', source:'osm' }]
+  };
+}
 
 document.addEventListener('DOMContentLoaded', function() {
   map = new maplibregl.Map({
     container: 'map',
-    style: 'https://api.maptiler.com/maps/outdoor-v2/style.json?key=' + MAPTILER_KEY,
-    center: [DEFAULT_LNG, DEFAULT_LAT],
-    zoom: DEFAULT_ZOOM,
+    style: buildStyle(),
+    center: [141.508, 43.859],
+    zoom: 13,
     pitch: 0,
     bearing: 0,
     antialias: true,
     attributionControl: false
   });
 
-  map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-left');
-  map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+  map.addControl(new maplibregl.NavigationControl({ visualizePitch:true }), 'top-left');
+  map.addControl(new maplibregl.AttributionControl({ compact:true }), 'bottom-right');
 
   map.on('load', function() {
-    // Add terrain (3D elevation) — only activates when toggle3D() is called
-    map.addSource('terrain', {
-      type: 'raster-dem',
-      url: 'https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=' + MAPTILER_KEY,
-      tileSize: 256
-    });
+    if (MAPTILER_KEY && MAPTILER_KEY !== 'YOUR_MAPTILER_KEY_HERE') {
+      map.addSource('terrain', {
+        type:'raster-dem',
+        url:'https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=' + MAPTILER_KEY,
+        tileSize:256
+      });
+    }
     mapReady = true;
     loadData();
-  });
-
-  map.on('error', function(e) {
-    // Fallback to OSM if MapTiler key is not set
-    if (!MAPTILER_KEY || MAPTILER_KEY.includes('GET_FREE_KEY')) {
-      map.setStyle({
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors'
-          }
-        },
-        layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
-      });
-      mapReady = true;
-      loadData();
-    }
   });
 });
 
@@ -254,111 +173,79 @@ function toggle3D() {
   is3D = !is3D;
   var btn = document.getElementById('tilt-btn');
   if (is3D) {
-    if (mapReady) {
-      map.setTerrain({ source: 'terrain', exaggeration: 2.0 });
+    if (mapReady && MAPTILER_KEY && MAPTILER_KEY !== 'YOUR_MAPTILER_KEY_HERE') {
+      map.setTerrain({ source:'terrain', exaggeration:2.0 });
     }
-    map.easeTo({ pitch: 55, bearing: -15, duration: 1000 });
-    btn.style.background = '#2e7d50';
-    btn.style.color = 'white';
+    map.easeTo({ pitch:55, bearing:-15, duration:1000 });
+    btn.style.background = '#2e7d50'; btn.style.color = '#fff';
   } else {
     if (mapReady) map.setTerrain(null);
-    map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
-    btn.style.background = 'white';
-    btn.style.color = '#1a1a1a';
+    map.easeTo({ pitch:0, bearing:0, duration:800 });
+    btn.style.background = '#fff'; btn.style.color = '#1a1a1a';
   }
 }
 
-var activeMarkers = [];
-
 function renderMarkers(data) {
-  activeMarkers.forEach(function(m) { m.remove(); });
+  activeMarkers.forEach(function(m){ m.remove(); });
   activeMarkers = [];
-
   data.forEach(function(item) {
-    if (!item.lat || !item.lng) return;
-    var lat = parseFloat(item.lat);
-    var lng = parseFloat(item.lng);
-    if (isNaN(lat) || isNaN(lng)) return;
-
-    var emoji = CATEGORY_EMOJI[item.category] || '📍';
+    var lat = parseFloat(item.lat), lng = parseFloat(item.lng);
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
     var el = document.createElement('div');
     el.className = 'emoji-marker';
-    el.textContent = emoji;
+    el.textContent = EMOJI[item.category] || '📍';
     el.title = (lang === 'ja' ? item.name_ja : item.name_en) || '';
-
-    var marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-      .setLngLat([lng, lat])
-      .addTo(map);
-
-    el.addEventListener('click', function() { openSheet(item); });
+    var marker = new maplibregl.Marker({ element:el, anchor:'bottom' })
+      .setLngLat([lng, lat]).addTo(map);
+    el.addEventListener('click', function(){ openSheet(item); });
     activeMarkers.push(marker);
   });
 }
 
-function filterCategory(cat) {
-  activeCategory = cat;
-  document.querySelectorAll('.chip').forEach(function(c) {
-    c.classList.toggle('active', c.dataset.cat === cat);
-  });
-  var filtered = cat === 'all' ? allData : allData.filter(function(d) { return d.category === cat; });
-  renderMarkers(filtered);
+function filterCat(cat) {
+  activeCat = cat;
+  document.querySelectorAll('.chip').forEach(function(c){ c.classList.toggle('active', c.dataset.cat === cat); });
+  renderMarkers(cat === 'all' ? allData : allData.filter(function(d){ return d.category === cat; }));
 }
 
 function loadData() {
-  if (!GAS_URL || GAS_URL.includes('YOUR_APPS_SCRIPT')) {
-    document.getElementById('loading-text').textContent = '⚠ GAS_URL が設定されていません';
+  if (!GAS_URL || GAS_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    document.getElementById('loading-text').textContent = '⚠ GAS_URL を設定してください';
     return;
   }
-  window._mapDataCallback = function(data) {
+  window._cb = function(data) {
     allData = data;
     renderMarkers(data);
     document.getElementById('loading').style.display = 'none';
   };
   var s = document.createElement('script');
-  s.src = GAS_URL + '?sheet=orchards&callback=_mapDataCallback';
-  s.onerror = function() {
-    document.getElementById('loading-text').textContent = 'データ読み込みエラー。再試行してください。';
-  };
+  s.src = GAS_URL + '?sheet=orchards&callback=_cb';
+  s.onerror = function(){ document.getElementById('loading-text').textContent = 'データ読み込みエラー'; };
   document.head.appendChild(s);
 }
 
 function openSheet(item) {
   var isJa = lang === 'ja';
   var cat = item.category || 'orchard';
-  var color = CATEGORY_COLORS[cat] || '#888';
-  var catLabel = (CATEGORY_LABELS[lang] || CATEGORY_LABELS.ja)[cat] || cat;
-
-  document.getElementById('sheet-category-badge').textContent = catLabel;
-  document.getElementById('sheet-category-badge').style.background = color;
-  document.getElementById('sheet-name').textContent     = (isJa ? item.name_ja : item.name_en) || '';
-  document.getElementById('sheet-name-sub').textContent = (isJa ? item.name_en : item.name_ja) || '';
+  var badge = document.getElementById('sheet-cat-badge');
+  badge.textContent = (LABELS[lang]||LABELS.ja)[cat] || cat;
+  badge.style.background = COLORS[cat] || '#888';
+  document.getElementById('sheet-name').textContent     = (isJa ? item.name_ja     : item.name_en) || '';
+  document.getElementById('sheet-name-sub').textContent = (isJa ? item.name_en     : item.name_ja) || '';
   document.getElementById('sheet-desc').textContent     = (isJa ? item.description_ja : item.description_en) || '';
-  document.getElementById('sheet-hours').textContent    = item.hours  ? (isJa ? '時間: ' : 'Hours: ')  + item.hours  : '';
-  document.getElementById('sheet-season').textContent   = item.season ? (isJa ? '季節: ' : 'Season: ') + item.season : '';
-
+  document.getElementById('sheet-hours').textContent    = item.hours  ? (isJa?'時間: ':'Hours: ')  + item.hours  : '';
+  document.getElementById('sheet-season').textContent   = item.season ? (isJa?'季節: ':'Season: ') + item.season : '';
   var img = document.getElementById('sheet-image');
-  if (item.image_url) { img.src = item.image_url; img.style.display = 'block'; }
-  else { img.style.display = 'none'; }
-
-  var tagsDiv = document.getElementById('sheet-tags');
-  tagsDiv.innerHTML = '';
-  if (item.tags) {
-    item.tags.split(',').forEach(function(t) {
-      var chip = document.createElement('span');
-      chip.className = 'tag-chip';
-      chip.textContent = t.trim();
-      tagsDiv.appendChild(chip);
-    });
-  }
-
-  var navBtn = document.getElementById('navigate-btn');
+  if (item.image_url) { img.src = item.image_url; img.style.display = 'block'; } else { img.style.display = 'none'; }
+  var tags = document.getElementById('sheet-tags'); tags.innerHTML = '';
+  if (item.tags) item.tags.split(',').forEach(function(t){ var c=document.createElement('span');c.className='tag-chip';c.textContent=t.trim();tags.appendChild(c); });
+  var navBtn = document.getElementById('nav-btn');
   navBtn.href = item.google_maps_url ||
-    ('https://www.google.com/maps/dir/?api=1&destination=' + item.lat + ',' + item.lng + '&travelmode=driving&dir_action=navigate');
+    ('https://www.google.com/maps/dir/?api=1&destination='+item.lat+','+item.lng+'&travelmode=driving&dir_action=navigate');
   navBtn.style.display = item.lat ? 'block' : 'none';
-
   document.getElementById('bottom-sheet').classList.add('open');
   document.getElementById('sheet-backdrop').classList.add('open');
-  map.flyTo({ center: [parseFloat(item.lng), parseFloat(item.lat) + 0.003], duration: 600 });
+  map.flyTo({ center:[parseFloat(item.lng), parseFloat(item.lat)+0.003], duration:600 });
 }
 
 function closeSheet() {
@@ -371,22 +258,18 @@ function toggleLang() {
   document.getElementById('lang-toggle').textContent = lang === 'ja' ? 'EN' : '日本語';
   document.querySelectorAll('.chip[data-cat]').forEach(function(c) {
     var cat = c.dataset.cat;
-    var icons = { all:'🗺', orchard:'🍎', honey:'🍯', route:'🛤', parking:'🅿', toilet:'🚻', scenic:'🏔' };
-    var labels = lang === 'ja'
-      ? { all:'すべて', orchard:'果樹園', honey:'養蜂園', route:'回廊', parking:'駐車場', toilet:'トイレ', scenic:'見どころ' }
-      : { all:'All', orchard:'Orchard', honey:'Honey Farm', route:'Route', parking:'Parking', toilet:'Toilet', scenic:'Scenic' };
-    c.textContent = (icons[cat]||'') + ' ' + (labels[cat]||cat);
+    c.textContent = (ICONS[cat]||'') + ' ' + (LABELS[lang][cat]||cat);
   });
-  renderMarkers(activeCategory === 'all' ? allData : allData.filter(function(d){ return d.category === activeCategory; }));
+  renderMarkers(activeCat === 'all' ? allData : allData.filter(function(d){ return d.category === activeCat; }));
 }
 
 function locateMe() {
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(function(pos) {
-    map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 15, duration: 800 });
+    map.flyTo({ center:[pos.coords.longitude, pos.coords.latitude], zoom:15, duration:800 });
     var el = document.createElement('div');
-    el.style.cssText = 'width:14px;height:14px;background:#1565c0;border:3px solid white;border-radius:50%;box-shadow:0 0 8px rgba(21,101,192,0.6)';
-    new maplibregl.Marker({ element: el }).setLngLat([pos.coords.longitude, pos.coords.latitude]).addTo(map);
+    el.style.cssText = 'width:14px;height:14px;background:#1565c0;border:3px solid white;border-radius:50%;box-shadow:0 0 8px rgba(21,101,192,.6)';
+    new maplibregl.Marker({ element:el }).setLngLat([pos.coords.longitude, pos.coords.latitude]).addTo(map);
   });
 }
 </script>
