@@ -121,6 +121,63 @@ var MAPTILER_KEY = 'zqRM3ipv02HyL0fLF6Kw'; // leave '' to use flat OSM tiles
 var lang = 'ja', allData = [], activeCat = 'all', activeMarkers = [];
 var map, is3D = false, mapReady = false;
 
+function buildStyle() {
+  if (MAPTILER_KEY && MAPTILER_KEY !== 'YOUR_MAPTILER_KEY_HERE' && MAPTILER_KEY !== '') {
+    return 'https://api.maptiler.com/maps/outdoor-v2/style.json?key=' + MAPTILER_KEY;
+  }
+  return {
+    version: 8,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sources: { osm: { type:'raster', tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize:256, attribution:'© OpenStreetMap contributors' } },
+    layers: [{ id:'osm', type:'raster', source:'osm' }]
+  };
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  map = new maplibregl.Map({
+    container: 'map',
+    style: buildStyle(),
+    center: [141.527, 43.856],
+    zoom: 13,
+    pitch: 0,
+    bearing: 0,
+    antialias: true,
+    attributionControl: false
+  });
+
+  map.addControl(new maplibregl.NavigationControl({ visualizePitch:true }), 'top-left');
+  map.addControl(new maplibregl.AttributionControl({ compact:true }), 'bottom-right');
+
+  map.on('load', function() {
+    if (MAPTILER_KEY && MAPTILER_KEY !== 'YOUR_MAPTILER_KEY_HERE' && MAPTILER_KEY !== '') {
+      map.addSource('terrain', {
+        type:'raster-dem',
+        url:'https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=' + MAPTILER_KEY,
+        tileSize:256
+      });
+    }
+    mapReady = true;
+    loadData();
+  });
+});
+
+function toggle3D() {
+  is3D = !is3D;
+  var btn = document.getElementById('tilt-btn');
+  if (is3D) {
+    if (mapReady && MAPTILER_KEY && MAPTILER_KEY !== '' && MAPTILER_KEY !== 'YOUR_MAPTILER_KEY_HERE') {
+      map.setTerrain({ source:'terrain', exaggeration:2.0 });
+    }
+    map.easeTo({ pitch:55, bearing:-15, duration:1000 });
+    btn.style.background = '#2e7d50'; btn.style.color = '#fff';
+  } else {
+    if (mapReady) { try { map.setTerrain(null); } catch(e){} }
+    map.easeTo({ pitch:0, bearing:0, duration:800 });
+    btn.style.background = '#fff'; btn.style.color = '#1a1a1a';
+  }
+}
+
+
 // Crop name → emoji mapping (Japanese crop names from the CSV)
 var CROP_EMOJI = {
   'サクランボ': '🍒',
