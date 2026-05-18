@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>増毛オーチャードマップ | Mashike Orchard Map</title>
+
+  <!-- Leaflet CSS -->
+  //unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Marker Cluster CSS -->
+  //unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+  //unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+
+  <style>
+    :root {
+      --color-bg: #f7f6f2;
+      --color-surface: #ffffff;
+      --color-primary: #2e7d50;
+      --color-primary-dark: #1b5e34;
+      --color-text: #1a1a1a;
+      --color-text-muted: #666;
+      --color-border: #ddd;
+      --color-orchard: #2e7d50;
+      --color-honey: #e8a000;
+      --color-route: #1565c0;
+      --color-parking: #555;
+      --color-toilet: #6a1b9a;
+      --color-scenic: #bf360c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    #header {
+      background: var(--color-primary);
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 1001;
+    }
+    #header h1 { font-size: 16px; font-weight: 700; line-height: 1.3; }
+    #header h1 span { display: block; font-size: 11px; font-weight: 400; opacity: 0.85; }
+    #lang-toggle {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* Filter chips */
+    #filter-bar {
+      background: var(--color-surface);
+      padding: 8px 12px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--color-border);
+      scrollbar-width: none;
+    }
+    #filter-bar::-webkit-scrollbar { display: none; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1.5px solid;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: white;
+      font-family: inherit;
+    }
+    .chip.active { color: white !important; }
+    .chip[data-cat="all"] { border-color: #333; color: #333; }
+    .chip[data-cat="all"].active { background: #333; }
+    .chip[data-cat="orchard"] { border-color: var(--color-orchard); color: var(--color-orchard); }
+    .chip[data-cat="orchard"].active { background: var(--color-orchard); }
+    .chip[data-cat="honey"] { border-color: var(--color-honey); color: var(--color-honey); }
+    .chip[data-cat="honey"].active { background: var(--color-honey); }
+    .chip[data-cat="route"] { border-color: var(--color-route); color: var(--color-route); }
+    .chip[data-cat="route"].active { background: var(--color-route); }
+    .chip[data-cat="parking"] { border-color: var(--color-parking); color: var(--color-parking); }
+    .chip[data-cat="parking"].active { background: var(--color-parking); }
+    .chip[data-cat="toilet"] { border-color: var(--color-toilet); color: var(--color-toilet); }
+    .chip[data-cat="toilet"].active { background: var(--color-toilet); }
+    .chip[data-cat="scenic"] { border-color: var(--color-scenic); color: var(--color-scenic); }
+    .chip[data-cat="scenic"].active { background: var(--color-scenic); }
+
+    /* Map */
+    #map { flex: 1; z-index: 1; }
+
+    /* Bottom sheet */
+    #sheet-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 1100;
+    }
+    #bottom-sheet {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--color-surface);
+      border-radius: 18px 18px 0 0;
+      padding: 20px 20px 32px;
+      max-height: 70dvh;
+      overflow-y: auto;
+      z-index: 1200;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+    }
+    #bottom-sheet.open { transform: translateY(0); }
+    #sheet-backdrop.open { display: block; }
+
+    .sheet-handle {
+      width: 40px; height: 4px;
+      background: var(--color-border);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+
+    #sheet-category-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+      color: white;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    #sheet-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    #sheet-name-sub { font-size: 13px; color: var(--color-text-muted); margin-bottom: 12px; }
+    #sheet-image {
+      width: 100%; height: 180px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      display: none;
+      background: #eee;
+    }
+    #sheet-desc { font-size: 14px; line-height: 1.65; color: #333; margin-bottom: 8px; }
+    #sheet-hours { font-size: 13px; color: var(--color-text-muted); margin-bottom: 4px; }
+    #sheet-season { font-size: 13px; color: var(--color-text-muted); margin-bottom: 16px; }
+    #sheet-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .tag-chip {
+      background: #f0f0f0;
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-size: 12px;
+      color: #555;
+    }
+
+    #navigate-btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      margin-bottom: 10px;
+    }
+    #navigate-btn:active { background: var(--color-primary-dark); }
+    #close-sheet-btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background: #f5f5f5;
+      color: #555;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    /* Locate me button */
+    #locate-btn {
+      position: absolute;
+      bottom: 24px;
+      right: 16px;
+      z-index: 999;
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Loading overlay */
+    #loading {
+      position: fixed; inset: 0;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--color-text-muted);
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #e0e0e0;
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #attribution {
+      position: absolute;
+      bottom: 5px; left: 5px;
+      font-size: 10px; color: #888;
+      z-index: 998;
+      pointer-events: none;
+    }
+  </style>
+
+  <!-- Google Fonts -->
+  //fonts.googleapis.com">
+  //fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span id="loading-text">マップを読み込み中...</span>
+</div>
+
+<div id="header">
+  <h1>増毛オーチャードマップ <span>Mashike Orchard Map</span></h1>
+  <button id="lang-toggle" onclick="toggleLang()">EN</button>
+</div>
+
+<div id="filter-bar">
+  <button class="chip active" data-cat="all" onclick="filterCategory('all')">🗺 すべて</button>
+  <button class="chip" data-cat="orchard" onclick="filterCategory('orchard')">🍎 果樹園</button>
+  <button class="chip" data-cat="honey" onclick="filterCategory('honey')">🍯 養蜂園</button>
+  <button class="chip" data-cat="route" onclick="filterCategory('route')">🛤 回廊</button>
+  <button class="chip" data-cat="parking" onclick="filterCategory('parking')">🅿 駐車場</button>
+  <button class="chip" data-cat="toilet" onclick="filterCategory('toilet')">🚻 トイレ</button>
+  <button class="chip" data-cat="scenic" onclick="filterCategory('scenic')">🏔 見どころ</button>
+</div>
+
+<div id="map"></div>
+<button id="locate-btn" onclick="locateMe()" title="現在地">📍</button>
+<div id="attribution">© OpenStreetMap contributors</div>
+
+<div id="sheet-backdrop" onclick="closeSheet()"></div>
+<div id="bottom-sheet">
+  <div class="sheet-handle"></div>
+  <span id="sheet-category-badge"></span>
+  <div id="sheet-name"></div>
+  <div id="sheet-name-sub"></div>
+  <img id="sheet-image" alt="" loading="lazy" />
+  <div id="sheet-desc"></div>
+  <div id="sheet-hours"></div>
+  <div id="sheet-season"></div>
+  <div id="sheet-tags"></div>
+  <a id="navigate-btn" target="_blank" rel="noopener noreferrer">🗺 ここへナビ / Navigate Here</a>
+  <button id="close-sheet-btn" onclick="closeSheet()">閉じる / Close</button>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+<script>
+  // ============================================================
+  // CONFIGURATION — edit these two values
+  // ============================================================
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbyoK-Z6nF7RgtkQEA-kwJxSYH_6eplPJNyXArynC-sxaHu9Ze4IapzOLInha1_sXZntbg/exec'; // paste your /exec URL
+  var DEFAULT_LAT = 43.859;
+  var DEFAULT_LNG = 141.508;
+  var DEFAULT_ZOOM = 13;
+  // ============================================================
+
+  var lang = 'ja';
+  var allData = [];
+  var markers = {};
+  var activeCategory = 'all';
+  var map, clusterGroup;
+
+  var CATEGORY_COLORS = {
+    orchard: '#2e7d50', honey: '#e8a000', route: '#1565c0',
+    parking: '#555', toilet: '#6a1b9a', scenic: '#bf360c'
+  };
+
+  var CATEGORY_LABELS = {
+    ja: { orchard: '果樹園', honey: '養蜂園', route: '回廊', parking: '駐車場', toilet: 'トイレ', scenic: '見どころ' },
+    en: { orchard: 'Orchard', honey: 'Honey Farm', route: 'Route', parking: 'Parking', toilet: 'Toilet', scenic: 'Scenic' }
+  };
+
+  // Initialize map
+  map = L.map('map', { zoomControl: true }).setView([DEFAULT_LAT, DEFAULT_LNG], DEFAULT_ZOOM);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  clusterGroup = L.markerClusterGroup({ maxClusterRadius: 40 });
+  map.addLayer(clusterGroup);
+
+  // Create colored circle marker
+  function makeIcon(category) {
+    var color = CATEGORY_COLORS[category] || '#888';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">' +
+      '<path d="M14 0C6.27 0 0 6.27 0 14c0 9.33 14 22 14 22S28 23.33 28 14C28 6.27 21.73 0 14 0z" fill="' + color + '"/>' +
+      'ircle cx="14" cy="14" r="6" fill="white" opacity="0.9"/>' +
+      '</svg>';
+    return L.divIcon({
+      html: svg,
+      className: '',
+      iconSize: [28, 36],
+      iconAnchor: [14, 36],
+      popupAnchor: [0, -36]
+    });
+  }
+
+  // Load data via JSONP
+  function loadData() {
+    window._mapDataCallback = function(data) {
+      allData = data;
+      renderMarkers(data);
+      document.getElementById('loading').style.display = 'none';
+    };
+    var s = document.createElement('script');
+    s.src = GAS_URL + '?sheet=orchards&callback=_mapDataCallback';
+    s.onerror = function() {
+      document.getElementById('loading-text').textContent = 'データ読み込みエラー。再試行してください。';
+    };
+    document.head.appendChild(s);
+  }
+
+  function renderMarkers(data) {
+    clusterGroup.clearLayers();
+    markers = {};
+    data.forEach(function(item) {
+      if (!item.lat || !item.lng) return;
+      var lat = parseFloat(item.lat);
+      var lng = parseFloat(item.lng);
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      var marker = L.marker([lat, lng], { icon: makeIcon(item.category) });
+      marker.on('click', function() { openSheet(item); });
+      markers[item.id] = marker;
+      clusterGroup.addLayer(marker);
+    });
+  }
+
+  function filterCategory(cat) {
+    activeCategory = cat;
+    document.querySelectorAll('.chip').forEach(function(c) {
+      c.classList.toggle('active', c.dataset.cat === cat);
+    });
+    var filtered = cat === 'all' ? allData : allData.filter(function(d) { return d.category === cat; });
+    renderMarkers(filtered);
+  }
+
+  function openSheet(item) {
+    var isJa = lang === 'ja';
+    var name = isJa ? item.name_ja : item.name_en;
+    var nameSub = isJa ? item.name_en : item.name_ja;
+    var desc = isJa ? item.description_ja : item.description_en;
+    var cat = item.category || 'orchard';
+    var color = CATEGORY_COLORS[cat] || '#888';
+    var catLabel = (CATEGORY_LABELS[lang] || CATEGORY_LABELS.ja)[cat] || cat;
+
+    var badge = document.getElementById('sheet-category-badge');
+    badge.textContent = catLabel;
+    badge.style.background = color;
+
+    document.getElementById('sheet-name').textContent = name || '';
+    document.getElementById('sheet-name-sub').textContent = nameSub || '';
+    document.getElementById('sheet-desc').textContent = desc || '';
+    document.getElementById('sheet-hours').textContent = item.hours ? (isJa ? '時間: ' : 'Hours: ') + item.hours : '';
+    document.getElementById('sheet-season').textContent = item.season ? (isJa ? '季節: ' : 'Season: ') + item.season : '';
+
+    var img = document.getElementById('sheet-image');
+    if (item.image_url) {
+      img.src = item.image_url;
+      img.style.display = 'block';
+    } else {
+      img.style.display = 'none';
+    }
+
+    var tagsDiv = document.getElementById('sheet-tags');
+    tagsDiv.innerHTML = '';
+    if (item.tags) {
+      item.tags.split(',').forEach(function(t) {
+        var chip = document.createElement('span');
+        chip.className = 'tag-chip';
+        chip.textContent = t.trim();
+        tagsDiv.appendChild(chip);
+      });
+    }
+
+    var navBtn = document.getElementById('navigate-btn');
+    if (item.google_maps_url) {
+      navBtn.href = item.google_maps_url;
+      navBtn.style.display = 'block';
+    } else if (item.lat && item.lng) {
+      navBtn.href = 'https://www.google.com/maps/dir/?api=1&destination=' + item.lat + ',' + item.lng + '&travelmode=driving&dir_action=navigate';
+      navBtn.style.display = 'block';
+    } else {
+      navBtn.style.display = 'none';
+    }
+
+    document.getElementById('bottom-sheet').classList.add('open');
+    document.getElementById('sheet-backdrop').classList.add('open');
+
+    // Pan map slightly upward so marker isn't behind the sheet
+    if (item.lat && item.lng) {
+      map.panTo([parseFloat(item.lat) + 0.003, parseFloat(item.lng)]);
+    }
+  }
+
+  function closeSheet() {
+    document.getElementById('bottom-sheet').classList.remove('open');
+    document.getElementById('sheet-backdrop').classList.remove('open');
+  }
+
+  function toggleLang() {
+    lang = lang === 'ja' ? 'en' : 'ja';
+    document.getElementById('lang-toggle').textContent = lang === 'ja' ? 'EN' : '日本語';
+    // Update filter labels
+    var labels = { all: lang === 'ja' ? '🗺 すべて' : '🗺 All' };
+    document.querySelectorAll('.chip[data-cat]').forEach(function(c) {
+      var cat = c.dataset.cat;
+      if (cat === 'all') { c.textContent = labels.all; return; }
+      var icon = { orchard: '🍎', honey: '🍯', route: '🛤', parking: '🅿', toilet: '🚻', scenic: '🏔' }[cat] || '';
+      c.textContent = icon + ' ' + ((CATEGORY_LABELS[lang] || CATEGORY_LABELS.ja)[cat] || cat);
+    });
+  }
+
+  function locateMe() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+      L.circleMarker([pos.coords.latitude, pos.coords.longitude], {
+        radius: 8, fillColor: '#1565c0', color: 'white', weight: 2, fillOpacity: 0.9
+      }).addTo(map).bindPopup(lang === 'ja' ? '現在地' : 'Your location').openPopup();
+    });
+  }
+
+  // Start
+  loadData();
+</script>
+</body>
+</html>
