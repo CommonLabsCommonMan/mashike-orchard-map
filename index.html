@@ -4,14 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>増毛オーチャードマップ | Mashike Orchard Map</title>
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.13.0/dist/maplibre-gl.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
+  --color-bg: #f7f6f2;
+  --color-surface: #ffffff;
   --color-primary: #2e7d50;
   --color-primary-dark: #1b5e34;
-  --color-surface: #ffffff;
   --color-text: #1a1a1a;
   --color-text-muted: #666;
   --color-border: #ddd;
@@ -24,16 +27,21 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; }
+
+/* FIX: html and body must both be 100% height for flex layout to work */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
-  background: #f7f6f2;
+  background: var(--color-bg);
   color: var(--color-text);
   display: flex;
   flex-direction: column;
 }
 
-/* ── Header ── */
 #header {
   background: var(--color-primary);
   color: white;
@@ -47,8 +55,7 @@ body {
 }
 #header h1 { font-size: 16px; font-weight: 700; line-height: 1.3; }
 #header h1 span { display: block; font-size: 11px; font-weight: 400; opacity: 0.85; }
-#header-right { display: flex; gap: 8px; align-items: center; }
-#lang-toggle, #toggle-3d {
+#lang-toggle {
   background: rgba(255,255,255,0.2);
   border: 1px solid rgba(255,255,255,0.4);
   color: white;
@@ -56,11 +63,8 @@ body {
   border-radius: 20px;
   font-size: 12px;
   cursor: pointer;
-  font-family: inherit;
 }
-#toggle-3d.active { background: rgba(255,255,255,0.45); font-weight: 700; }
 
-/* ── Filter bar ── */
 #filter-bar {
   background: var(--color-surface);
   padding: 8px 12px;
@@ -72,6 +76,7 @@ body {
   scrollbar-width: none;
 }
 #filter-bar::-webkit-scrollbar { display: none; }
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -87,37 +92,30 @@ body {
   font-family: inherit;
 }
 .chip.active { color: white !important; }
-.chip[data-cat="all"]     { border-color:#333; color:#333; }
-.chip[data-cat="all"].active { background:#333; }
-.chip[data-cat="orchard"] { border-color:var(--color-orchard); color:var(--color-orchard); }
-.chip[data-cat="orchard"].active { background:var(--color-orchard); }
-.chip[data-cat="honey"]   { border-color:var(--color-honey); color:var(--color-honey); }
-.chip[data-cat="honey"].active { background:var(--color-honey); }
-.chip[data-cat="route"]   { border-color:var(--color-route); color:var(--color-route); }
-.chip[data-cat="route"].active { background:var(--color-route); }
-.chip[data-cat="parking"] { border-color:var(--color-parking); color:var(--color-parking); }
-.chip[data-cat="parking"].active { background:var(--color-parking); }
-.chip[data-cat="toilet"]  { border-color:var(--color-toilet); color:var(--color-toilet); }
-.chip[data-cat="toilet"].active { background:var(--color-toilet); }
-.chip[data-cat="scenic"]  { border-color:var(--color-scenic); color:var(--color-scenic); }
-.chip[data-cat="scenic"].active { background:var(--color-scenic); }
+.chip[data-cat="all"] { border-color: #333; color: #333; }
+.chip[data-cat="all"].active { background: #333; }
+.chip[data-cat="orchard"] { border-color: var(--color-orchard); color: var(--color-orchard); }
+.chip[data-cat="orchard"].active { background: var(--color-orchard); }
+.chip[data-cat="honey"] { border-color: var(--color-honey); color: var(--color-honey); }
+.chip[data-cat="honey"].active { background: var(--color-honey); }
+.chip[data-cat="route"] { border-color: var(--color-route); color: var(--color-route); }
+.chip[data-cat="route"].active { background: var(--color-route); }
+.chip[data-cat="parking"] { border-color: var(--color-parking); color: var(--color-parking); }
+.chip[data-cat="parking"].active { background: var(--color-parking); }
+.chip[data-cat="toilet"] { border-color: var(--color-toilet); color: var(--color-toilet); }
+.chip[data-cat="toilet"].active { background: var(--color-toilet); }
+.chip[data-cat="scenic"] { border-color: var(--color-scenic); color: var(--color-scenic); }
+.chip[data-cat="scenic"].active { background: var(--color-scenic); }
 
-/* ── Map ── */
-#map { flex: 1; min-height: 0; width: 100%; position: relative; }
-
-/* ── Emoji markers ── */
-.emoji-marker {
-  font-size: 28px;
-  line-height: 1;
-  cursor: pointer;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
-  transition: transform 0.15s;
-  user-select: none;
-  display: block;
+/* FIX: map must have explicit height, not just flex:1 alone */
+#map {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+  z-index: 1;
 }
-.emoji-marker:hover { transform: scale(1.2); }
 
-/* ── Bottom sheet ── */
 #sheet-backdrop {
   display: none;
   position: fixed; inset: 0;
@@ -130,7 +128,7 @@ body {
   background: var(--color-surface);
   border-radius: 18px 18px 0 0;
   padding: 20px 20px 32px;
-  max-height: 72dvh;
+  max-height: 70dvh;
   overflow-y: auto;
   z-index: 1200;
   transform: translateY(100%);
@@ -139,15 +137,18 @@ body {
 }
 #bottom-sheet.open { transform: translateY(0); }
 #sheet-backdrop.open { display: block; }
+
 .sheet-handle {
   width: 40px; height: 4px;
   background: var(--color-border);
   border-radius: 2px;
   margin: 0 auto 16px;
 }
+
 #sheet-category-badge {
   display: inline-block;
-  font-size: 11px; font-weight: 700;
+  font-size: 11px;
+  font-weight: 700;
   padding: 3px 10px;
   border-radius: 12px;
   color: white;
@@ -155,58 +156,87 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-#sheet-emoji { font-size: 32px; margin-bottom: 6px; display: block; }
-#sheet-name  { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+#sheet-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
 #sheet-name-sub { font-size: 13px; color: var(--color-text-muted); margin-bottom: 12px; }
 #sheet-image {
-  width: 100%; height: 180px; object-fit: cover;
-  border-radius: 10px; margin-bottom: 12px;
-  display: none; background: #eee;
+  width: 100%; height: 180px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  display: none;
+  background: #eee;
 }
-#sheet-desc   { font-size: 14px; line-height: 1.65; color: #333; margin-bottom: 8px; }
-#sheet-hours  { font-size: 13px; color: var(--color-text-muted); margin-bottom: 4px; }
+#sheet-desc { font-size: 14px; line-height: 1.65; color: #333; margin-bottom: 8px; }
+#sheet-hours { font-size: 13px; color: var(--color-text-muted); margin-bottom: 4px; }
 #sheet-season { font-size: 13px; color: var(--color-text-muted); margin-bottom: 16px; }
-#sheet-tags   { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+#sheet-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
 .tag-chip {
-  background: #f0f0f0; border-radius: 12px;
-  padding: 3px 10px; font-size: 12px; color: #555;
+  background: #f0f0f0;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #555;
 }
+
 #navigate-btn {
-  display: block; width: 100%; padding: 14px;
-  background: var(--color-primary); color: white;
-  border: none; border-radius: 12px;
-  font-size: 15px; font-weight: 700;
-  font-family: inherit; cursor: pointer;
-  text-align: center; text-decoration: none;
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
   margin-bottom: 10px;
 }
 #navigate-btn:active { background: var(--color-primary-dark); }
 #close-sheet-btn {
-  display: block; width: 100%; padding: 12px;
-  background: #f5f5f5; color: #555; border: none;
-  border-radius: 12px; font-size: 14px;
-  font-family: inherit; cursor: pointer;
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background: #f5f5f5;
+  color: #555;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
 }
 
-/* ── Locate button ── */
 #locate-btn {
-  position: absolute; bottom: 80px; right: 12px;
+  position: absolute;
+  bottom: 24px;
+  right: 16px;
   z-index: 999;
-  background: white; border: 1px solid var(--color-border);
-  border-radius: 50%; width: 44px; height: 44px;
-  font-size: 20px; cursor: pointer;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* ── Loading ── */
 #loading {
   position: fixed; inset: 0;
   background: white;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  z-index: 9999; gap: 12px;
-  font-size: 14px; color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--color-text-muted);
 }
 .spinner {
   width: 36px; height: 36px;
@@ -216,9 +246,6 @@ body {
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-/* MapLibre overrides */
-.maplibregl-ctrl-bottom-right { bottom: 8px; right: 8px; }
 </style>
 </head>
 <body>
@@ -230,20 +257,17 @@ body {
 
 <div id="header">
   <h1>増毛オーチャードマップ <span>Mashike Orchard Map</span></h1>
-  <div id="header-right">
-    <button id="toggle-3d" onclick="toggle3D()">🏔 3D</button>
-    <button id="lang-toggle" onclick="toggleLang()">EN</button>
-  </div>
+  <button id="lang-toggle" onclick="toggleLang()">EN</button>
 </div>
 
 <div id="filter-bar">
-  <button class="chip active" data-cat="all"     onclick="filterCategory('all')">🗺 すべて</button>
-  <button class="chip"        data-cat="orchard" onclick="filterCategory('orchard')">🍎 果樹園</button>
-  <button class="chip"        data-cat="honey"   onclick="filterCategory('honey')">🍯 養蜂園</button>
-  <button class="chip"        data-cat="route"   onclick="filterCategory('route')">🛤 回廊</button>
-  <button class="chip"        data-cat="parking" onclick="filterCategory('parking')">🅿 駐車場</button>
-  <button class="chip"        data-cat="toilet"  onclick="filterCategory('toilet')">🚻 トイレ</button>
-  <button class="chip"        data-cat="scenic"  onclick="filterCategory('scenic')">🏔 見どころ</button>
+  <button class="chip active" data-cat="all" onclick="filterCategory('all')">🗺 すべて</button>
+  <button class="chip" data-cat="orchard" onclick="filterCategory('orchard')">🍎 果樹園</button>
+  <button class="chip" data-cat="honey" onclick="filterCategory('honey')">🍯 養蜂園</button>
+  <button class="chip" data-cat="route" onclick="filterCategory('route')">🛤 回廊</button>
+  <button class="chip" data-cat="parking" onclick="filterCategory('parking')">🅿 駐車場</button>
+  <button class="chip" data-cat="toilet" onclick="filterCategory('toilet')">🚻 トイレ</button>
+  <button class="chip" data-cat="scenic" onclick="filterCategory('scenic')">🏔 見どころ</button>
 </div>
 
 <div id="map">
@@ -254,7 +278,6 @@ body {
 <div id="bottom-sheet">
   <div class="sheet-handle"></div>
   <span id="sheet-category-badge"></span>
-  <span id="sheet-emoji"></span>
   <div id="sheet-name"></div>
   <div id="sheet-name-sub"></div>
   <img id="sheet-image" alt="" loading="lazy">
@@ -266,30 +289,25 @@ body {
   <button id="close-sheet-btn" onclick="closeSheet()">閉じる / Close</button>
 </div>
 
-<script src="https://unpkg.com/maplibre-gl@5.13.0/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
 <script>
-// ── EDIT THESE ────────────────────────────────────────────────
-var GAS_URL     = 'https://script.google.com/macros/s/AKfycbyoK-Z6nF7RgtkQEA-kwJxSYH_6eplPJNyXArynC-sxaHu9Ze4IapzOLInha1_sXZntbg/exec';
+// ── EDIT THESE ──────────────────────────────────────────────
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyoK-Z6nF7RgtkQEA-kwJxSYH_6eplPJNyXArynC-sxaHu9Ze4IapzOLInha1_sXZntbg/exec';
 var DEFAULT_LAT  = 43.859;
 var DEFAULT_LNG  = 141.508;
 var DEFAULT_ZOOM = 13;
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
 var lang = 'ja';
 var allData = [];
 var activeCategory = 'all';
-var map;
-var activeMarkers = [];
-var is3D = false;
-
-var CATEGORY_EMOJIS = {
-  orchard: '🍎', honey: '🍯', route: '🛤',
-  parking: '🅿',  toilet: '🚻', scenic: '🏔'
-};
+var map, clusterGroup;
 
 var CATEGORY_COLORS = {
   orchard: '#2e7d50', honey: '#e8a000', route: '#1565c0',
-  parking: '#555',    toilet: '#6a1b9a', scenic: '#bf360c'
+  parking: '#555',   toilet: '#6a1b9a', scenic: '#bf360c'
 };
 
 var CATEGORY_LABELS = {
@@ -297,158 +315,90 @@ var CATEGORY_LABELS = {
   en: { orchard:'Orchard', honey:'Honey Farm', route:'Route', parking:'Parking', toilet:'Toilet', scenic:'Scenic' }
 };
 
-// ── Map style: OSM raster + free terrain DEM ─────────────────
-var MAP_STYLE = {
-  version: 8,
-  sources: {
-    osm: {
-      type: 'raster',
-      tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxzoom: 19
-    },
-    terrainSource: {
-      type: 'raster-dem',
-      url: 'https://demotiles.maplibre.org/terrain-tiles/tiles.json',
-      tileSize: 256
-    },
-    hillshadeSource: {
-      type: 'raster-dem',
-      url: 'https://demotiles.maplibre.org/terrain-tiles/tiles.json',
-      tileSize: 256
-    }
-  },
-  layers: [
-    { id: 'osm', type: 'raster', source: 'osm' },
-    {
-      id: 'hills',
-      type: 'hillshade',
-      source: 'hillshadeSource',
-      layout: { visibility: 'visible' },
-      paint: { 'hillshade-shadow-color': '#3a3020', 'hillshade-exaggeration': 0.5 }
-    }
-  ],
-  sky: {}
-};
+// FIX: initialize map only after DOM is fully ready
+document.addEventListener('DOMContentLoaded', function() {
+  map = L.map('map', { zoomControl: true }).setView([DEFAULT_LAT, DEFAULT_LNG], DEFAULT_ZOOM);
 
-// ── Init map ──────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function () {
-  map = new maplibregl.Map({
-    container: 'map',
-    style: MAP_STYLE,
-    center: [DEFAULT_LNG, DEFAULT_LAT],
-    zoom: DEFAULT_ZOOM,
-    pitch: 0,
-    maxPitch: 85
-  });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
 
-  map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
-  map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+  clusterGroup = L.markerClusterGroup({ maxClusterRadius: 40 });
+  map.addLayer(clusterGroup);
 
-  map.on('load', function () {
-    // Terrain ready — load data
-    loadData();
-  });
+  // FIX: invalidateSize forces Leaflet to recalculate map container dimensions
+  setTimeout(function() {
+    map.invalidateSize();
+  }, 200);
+
+  loadData();
 });
 
-// ── 3D toggle ─────────────────────────────────────────────────
-function toggle3D() {
-  is3D = !is3D;
-  var btn = document.getElementById('toggle-3d');
-  if (is3D) {
-    map.setTerrain({ source: 'terrainSource', exaggeration: 1.5 });
-    map.easeTo({ pitch: 60, bearing: -15, duration: 800 });
-    btn.classList.add('active');
-    btn.textContent = '🗺 2D';
-  } else {
-    map.setTerrain(null);
-    map.easeTo({ pitch: 0, bearing: 0, duration: 600 });
-    btn.classList.remove('active');
-    btn.textContent = '🏔 3D';
-  }
+function makeIcon(category) {
+  var color = CATEGORY_COLORS[category] || '#888';
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">'
+    + '<path d="M14 0C6.27 0 0 6.27 0 14c0 9.33 14 22 14 22S28 23.33 28 14C28 6.27 21.73 0 14 0z" fill="' + color + '"/>'
+    + '<circle cx="14" cy="14" r="6" fill="white" opacity="0.9"/>'
+    + '</svg>';
+  return L.divIcon({ html: svg, className: '', iconSize: [28,36], iconAnchor: [14,36], popupAnchor: [0,-36] });
 }
 
-// ── Load data via JSONP ───────────────────────────────────────
 function loadData() {
   if (!GAS_URL || GAS_URL === 'YOUR_APPS_SCRIPT_DEPLOY_URL_HERE') {
     document.getElementById('loading-text').textContent = '⚠ GAS_URL が設定されていません';
     return;
   }
-  window._mapDataCallback = function (data) {
+  window._mapDataCallback = function(data) {
     allData = data;
     renderMarkers(data);
     document.getElementById('loading').style.display = 'none';
   };
   var s = document.createElement('script');
   s.src = GAS_URL + '?sheet=orchards&callback=_mapDataCallback';
-  s.onerror = function () {
+  s.onerror = function() {
     document.getElementById('loading-text').textContent = 'データ読み込みエラー。再試行してください。';
   };
   document.head.appendChild(s);
 }
 
-// ── Render emoji markers ──────────────────────────────────────
 function renderMarkers(data) {
-  // Remove existing markers
-  activeMarkers.forEach(function (m) { m.remove(); });
-  activeMarkers = [];
-
-  data.forEach(function (item) {
+  clusterGroup.clearLayers();
+  data.forEach(function(item) {
     if (!item.lat || !item.lng) return;
     var lat = parseFloat(item.lat);
     var lng = parseFloat(item.lng);
     if (isNaN(lat) || isNaN(lng)) return;
-
-    var emoji = CATEGORY_EMOJIS[item.category] || '📍';
-    var el = document.createElement('div');
-    el.className = 'emoji-marker';
-    el.textContent = emoji;
-    el.setAttribute('title', (lang === 'ja' ? item.name_ja : item.name_en) || '');
-    el.addEventListener('click', function (e) {
-      e.stopPropagation();
-      openSheet(item);
-    });
-
-    var marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-      .setLngLat([lng, lat])
-      .addTo(map);
-
-    activeMarkers.push(marker);
+    var marker = L.marker([lat, lng], { icon: makeIcon(item.category) });
+    marker.on('click', function() { openSheet(item); });
+    clusterGroup.addLayer(marker);
   });
 }
 
-// ── Filter ────────────────────────────────────────────────────
 function filterCategory(cat) {
   activeCategory = cat;
-  document.querySelectorAll('.chip').forEach(function (c) {
+  document.querySelectorAll('.chip').forEach(function(c) {
     c.classList.toggle('active', c.dataset.cat === cat);
   });
-  var filtered = cat === 'all' ? allData : allData.filter(function (d) { return d.category === cat; });
+  var filtered = cat === 'all' ? allData : allData.filter(function(d) { return d.category === cat; });
   renderMarkers(filtered);
 }
 
-// ── Bottom sheet ──────────────────────────────────────────────
 function openSheet(item) {
   var isJa = lang === 'ja';
-  var cat   = item.category || 'orchard';
+  var cat = item.category || 'orchard';
   var color = CATEGORY_COLORS[cat] || '#888';
-  var emoji = CATEGORY_EMOJIS[cat] || '📍';
   var catLabel = (CATEGORY_LABELS[lang] || CATEGORY_LABELS.ja)[cat] || cat;
 
-  document.getElementById('sheet-emoji').textContent = emoji;
-
   var badge = document.getElementById('sheet-category-badge');
-  badge.textContent   = catLabel;
+  badge.textContent = catLabel;
   badge.style.background = color;
 
   document.getElementById('sheet-name').textContent     = (isJa ? item.name_ja : item.name_en) || '';
   document.getElementById('sheet-name-sub').textContent = (isJa ? item.name_en : item.name_ja) || '';
   document.getElementById('sheet-desc').textContent     = (isJa ? item.description_ja : item.description_en) || '';
-  document.getElementById('sheet-hours').textContent    = item.hours  ? (isJa ? '⏰ 時間: '   : '⏰ Hours: ')   + item.hours  : '';
-  document.getElementById('sheet-season').textContent   = item.season ? (isJa ? '🌸 季節: '  : '🌸 Season: ')  + item.season : '';
+  document.getElementById('sheet-hours').textContent    = item.hours  ? (isJa ? '時間: ' : 'Hours: ')  + item.hours  : '';
+  document.getElementById('sheet-season').textContent   = item.season ? (isJa ? '季節: ' : 'Season: ') + item.season : '';
 
   var img = document.getElementById('sheet-image');
   if (item.image_url) { img.src = item.image_url; img.style.display = 'block'; }
@@ -457,7 +407,7 @@ function openSheet(item) {
   var tagsDiv = document.getElementById('sheet-tags');
   tagsDiv.innerHTML = '';
   if (item.tags) {
-    item.tags.split(',').forEach(function (t) {
+    item.tags.split(',').forEach(function(t) {
       var chip = document.createElement('span');
       chip.className = 'tag-chip';
       chip.textContent = t.trim();
@@ -466,13 +416,14 @@ function openSheet(item) {
   }
 
   var navBtn = document.getElementById('navigate-btn');
-  navBtn.href = item.google_maps_url ||
+  var dest = item.google_maps_url ||
     ('https://www.google.com/maps/dir/?api=1&destination=' + item.lat + ',' + item.lng + '&travelmode=driving&dir_action=navigate');
+  navBtn.href = dest;
   navBtn.style.display = item.lat ? 'block' : 'none';
 
   document.getElementById('bottom-sheet').classList.add('open');
   document.getElementById('sheet-backdrop').classList.add('open');
-  map.easeTo({ center: [parseFloat(item.lng), parseFloat(item.lat) + 0.003], duration: 300 });
+  if (item.lat && item.lng) map.panTo([parseFloat(item.lat) + 0.003, parseFloat(item.lng)]);
 }
 
 function closeSheet() {
@@ -480,34 +431,26 @@ function closeSheet() {
   document.getElementById('sheet-backdrop').classList.remove('open');
 }
 
-// ── Language toggle ───────────────────────────────────────────
 function toggleLang() {
   lang = lang === 'ja' ? 'en' : 'ja';
   document.getElementById('lang-toggle').textContent = lang === 'ja' ? 'EN' : '日本語';
-  var icons = { all:'🗺', orchard:'🍎', honey:'🍯', route:'🛤', parking:'🅿', toilet:'🚻', scenic:'🏔' };
-  var labels_ja = { all:'すべて', orchard:'果樹園', honey:'養蜂園', route:'回廊', parking:'駐車場', toilet:'トイレ', scenic:'見どころ' };
-  var labels_en = { all:'All', orchard:'Orchard', honey:'Honey Farm', route:'Route', parking:'Parking', toilet:'Toilet', scenic:'Scenic' };
-  var labels = lang === 'ja' ? labels_ja : labels_en;
-  document.querySelectorAll('.chip[data-cat]').forEach(function (c) {
+  document.querySelectorAll('.chip[data-cat]').forEach(function(c) {
     var cat = c.dataset.cat;
+    var icons = { all:'🗺', orchard:'🍎', honey:'🍯', route:'🛤', parking:'🅿', toilet:'🚻', scenic:'🏔' };
+    var labels = lang === 'ja'
+      ? { all:'すべて', orchard:'果樹園', honey:'養蜂園', route:'回廊', parking:'駐車場', toilet:'トイレ', scenic:'見どころ' }
+      : { all:'All', orchard:'Orchard', honey:'Honey Farm', route:'Route', parking:'Parking', toilet:'Toilet', scenic:'Scenic' };
     c.textContent = (icons[cat] || '') + ' ' + (labels[cat] || cat);
   });
-  // Re-render markers with updated language titles
-  renderMarkers(activeCategory === 'all' ? allData : allData.filter(function (d) { return d.category === activeCategory; }));
 }
 
-// ── Locate me ────────────────────────────────────────────────
 function locateMe() {
   if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(function (pos) {
-    map.easeTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 15, duration: 800 });
-    var el = document.createElement('div');
-    el.style.cssText = 'width:14px;height:14px;background:#1565c0;border:2px solid white;border-radius:50%;box-shadow:0 0 8px rgba(21,101,192,0.6)';
-    new maplibregl.Marker({ element: el })
-      .setLngLat([pos.coords.longitude, pos.coords.latitude])
-      .setPopup(new maplibregl.Popup({ offset: 16 }).setHTML(lang === 'ja' ? '現在地' : 'Your location'))
-      .addTo(map)
-      .togglePopup();
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+    L.circleMarker([pos.coords.latitude, pos.coords.longitude], {
+      radius: 8, fillColor: '#1565c0', color: 'white', weight: 2, fillOpacity: 0.9
+    }).addTo(map).bindPopup(lang === 'ja' ? '現在地' : 'Your location').openPopup();
   });
 }
 </script>
