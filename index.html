@@ -48,6 +48,9 @@
 [data-theme="dark"] .maplibregl-ctrl-group { background:#1c1b19 !important; }
 [data-theme="dark"] .maplibregl-ctrl button { background-color:#1c1b19 !important; }
 [data-theme="dark"] .maplibregl-ctrl button span { filter: invert(1); }
+[data-theme="dark"] #legend-panel { background:rgba(28,27,25,0.97); border-color:#3a3937; color:#e0dedd; }
+[data-theme="dark"] #legend-toggle { background:#1c1b19; border-color:#3a3937; color:#e0dedd; }
+  
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     --green:#4caf78; --green-dark:#2e7d50; --surface:#1c1b19; --text:#e0dedd;
@@ -125,6 +128,30 @@ body{display:flex;flex-direction:column}
 <div id="map">
   <button id="tilt-btn"   onclick="toggle3D()">🏔<br>3D</button>
   <button id="locate-btn" onclick="locateMe()" title="現在地">📍</button>
+    <div id="legend-toggle" onclick="toggleLegend()" title="凡例 / Legend"
+    style="position:absolute;bottom:80px;left:10px;z-index:500;background:#fff;border:1px solid #ddd;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15);color:#333">
+    ℹ 凡例
+  </div>
+
+  <div id="legend-panel"
+    style="display:none;position:absolute;bottom:120px;left:10px;z-index:500;background:rgba(255,255,255,0.97);border:1px solid #ddd;border-radius:12px;padding:12px 14px;box-shadow:0 4px 16px rgba(0,0,0,.18);min-width:160px;max-width:200px">
+    <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:6px">🗺 凡例 / Legend</div>
+    <div style="font-size:13px;line-height:2;color:#333">
+      🍒 サクランボ Cherry<br>
+      🍎 リンゴ Apple<br>
+      🍐 梨 Pear<br>
+      🍇 ブドウ Grape<br>
+      🍑 桃 Peach<br>
+      🟣 プルーン Prune<br>
+      💜 プラム Plum<br>
+      🍓 イチゴ Strawberry<br>
+      🫐 ブルーベリー Blueberry
+    </div>
+    <div style="margin-top:8px;border-top:1px solid #eee;padding-top:8px;font-size:12px;color:#888">
+      ✅ 収穫体験あり<br>
+      ❌ 収穫体験なし
+    </div>
+  </div>
 </div>
 
 <div id="sheet-backdrop" onclick="closeSheet()"></div>
@@ -259,10 +286,16 @@ function renderMarkers(data) {
     var lat = parseFloat(item.lat), lng = parseFloat(item.lng);
     if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
 
-    var emojiStr = (item.category === 'orchard' && item.crops)
-      ? getCropEmojis(item.crops)
+    var rawCrops = (item.crops || '').toString().trim();
+    var emojiStr = (item.category === 'orchard' && rawCrops.length > 0)
+      ? getCropEmojis(rawCrops)
       : (ICONS[item.category] || '📍');
 
+    // Outer wrapper — this is what MapLibre positions; NEVER apply transform here
+    var wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:relative;cursor:pointer;pointer-events:auto';
+
+    // Inner visual block — scale THIS, not the wrapper
     var el = document.createElement('div');
     el.style.cssText = [
       'display:grid',
@@ -270,30 +303,41 @@ function renderMarkers(data) {
       'width:66px',
       'line-height:1',
       'font-size:18px',
-      'cursor:pointer',
-      'filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))',
-      'transition:transform .15s',
-      'transform-origin:bottom center',
+      'text-align:center',
       'user-select:none',
       'background:rgba(255,255,255,0.92)',
       'border-radius:10px',
       'padding:4px 3px 2px 3px',
       'box-shadow:0 2px 8px rgba(0,0,0,0.22)',
-      'pointer-events:auto',
-      'text-align:center'
+      'transition:transform .15s ease',
+      'transform-origin:bottom center',
+      'will-change:transform'
     ].join(';');
     el.textContent = emojiStr;
-    var arrow = document.createElement('div');
-    arrow.style.cssText = 'width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid rgba(255,255,255,0.92);margin:0 auto;filter:drop-shadow(0 2px 2px rgba(0,0,0,.2))';
-    el.appendChild(arrow);
-
     el.title = item.name_ja || item.name_en || '';
-    el.onmouseenter = function(){ el.style.transform='scale(1.2)'; el.style.transformOrigin='bottom center'; };
-el.onmouseleave = function(){ el.style.transform='scale(1)'; };
 
-    var marker = new maplibregl.Marker({ element:el, anchor:'bottom' })
+    // Arrow pointer at bottom
+    var arrow = document.createElement('div');
+    arrow.style.cssText = [
+      'width:0',
+      'height:0',
+      'border-left:6px solid transparent',
+      'border-right:6px solid transparent',
+      'border-top:8px solid rgba(255,255,255,0.92)',
+      'margin:0 auto',
+      'filter:drop-shadow(0 2px 2px rgba(0,0,0,.15))'
+    ].join(';');
+
+    wrapper.appendChild(el);
+    wrapper.appendChild(arrow);
+
+    // Hover on wrapper, scale the inner el only
+    wrapper.onmouseenter = function(){ el.style.transform = 'scale(1.2)'; };
+    wrapper.onmouseleave = function(){ el.style.transform = 'scale(1)'; };
+    wrapper.addEventListener('click', function(){ openSheet(item); });
+
+    var marker = new maplibregl.Marker({ element: wrapper, anchor: 'bottom' })
       .setLngLat([lng, lat]).addTo(map);
-    el.addEventListener('click', function(){ openSheet(item); });
     activeMarkers.push(marker);
   });
 }
@@ -457,7 +501,15 @@ function openSheet(item) {
   document.getElementById('sheet-backdrop').classList.add('open');
   map.flyTo({ center:[parseFloat(item.lng), parseFloat(item.lat)+0.003], duration:600 });
 }
-
+function toggleLegend() {
+  var panel = document.getElementById('legend-panel');
+  var btn = document.getElementById('legend-toggle');
+  var isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  btn.style.background = isOpen ? '#fff' : '#2e7d50';
+  btn.style.color = isOpen ? '#333' : '#fff';
+  btn.style.borderColor = isOpen ? '#ddd' : '#2e7d50';
+}
 function closeSheet() {
   document.getElementById('bottom-sheet').classList.remove('open');
   document.getElementById('sheet-backdrop').classList.remove('open');
