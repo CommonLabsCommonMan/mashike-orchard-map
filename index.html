@@ -213,14 +213,22 @@ function loadData() {
     document.getElementById('loading-text').textContent = '⚠ GAS_URL を設定してください';
     return;
   }
+  var timeout = setTimeout(function() {
+    document.getElementById('loading-text').textContent = '⚠ データ読み込みタイムアウト — Apps Scriptを確認してください';
+  }, 10000);
+
   window._cb = function(data) {
+    clearTimeout(timeout);
     allData = data;
     renderMarkers(data);
     document.getElementById('loading').style.display = 'none';
   };
   var s = document.createElement('script');
   s.src = GAS_URL + '?sheet=orchards&callback=_cb';
-  s.onerror = function(){ document.getElementById('loading-text').textContent = 'データ読み込みエラー'; };
+  s.onerror = function() {
+    clearTimeout(timeout);
+    document.getElementById('loading-text').textContent = '⚠ スクリプト読み込みエラー — URLを確認してください';
+  };
   document.head.appendChild(s);
 }
 
