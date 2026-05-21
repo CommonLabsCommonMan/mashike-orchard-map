@@ -933,12 +933,15 @@ function enterMap() {
   var landing = document.getElementById('landing-screen');
   var loading = document.getElementById('loading');
 
+  // Always hide the landing when user clicks
+  if (landing) landing.style.display = 'none';
+
+  // Show loading overlay while data is still 0
   if (!allData || allData.length === 0) {
     if (loading) loading.style.display = 'flex';
-    return;
+  } else {
+    if (loading) loading.style.display = 'none';
   }
-
-  if (landing) landing.style.display = 'none';
 }
 function closeSheet() {
   document.getElementById('bottom-sheet').classList.remove('open');
