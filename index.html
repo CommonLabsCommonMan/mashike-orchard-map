@@ -418,40 +418,40 @@ body{display:flex;flex-direction:column}
       </p>
 
       <div class="landing-stats">
-        <div class="landing-stat-card">
-          <div class="landing-stat-value">15</div>
-          <div class="landing-stat-label">ORCHARDS</div>
-          <div class="landing-stat-sub">登録果樹園数</div>
-        </div>
-        <div class="landing-stat-card">
-          <div class="landing-stat-value">9+</div>
-          <div class="landing-stat-label">FRUITS</div>
-          <div class="landing-stat-sub">主要果物カテゴリ</div>
-        </div>
-        <div class="landing-stat-card">
-          <div class="landing-stat-value">6–10月</div>
-          <div class="landing-stat-label">SEASON</div>
-          <div class="landing-stat-sub">主な営業シーズン</div>
-        </div>
-      </div>
+  <div class="landing-stat-card">
+    <div class="landing-stat-value" id="landing-stat-orchards">--</div>
+    <div class="landing-stat-label">ORCHARDS</div>
+    <div class="landing-stat-sub">登録果樹園数</div>
+  </div>
+  <div class="landing-stat-card">
+    <div class="landing-stat-value" id="landing-stat-fruits">--</div>
+    <div class="landing-stat-label">FRUITS</div>
+    <div class="landing-stat-sub">主要果物カテゴリ</div>
+  </div>
+  <div class="landing-stat-card">
+    <div class="landing-stat-value" id="landing-stat-season">--</div>
+    <div class="landing-stat-label">SEASON</div>
+    <div class="landing-stat-sub">主な営業シーズン</div>
+  </div>
+</div>
 
       <div class="landing-highlight-row">
-        <div class="landing-highlight-card">
-          <div class="landing-highlight-head">代表的な果物</div>
-          <div class="landing-highlight-main">🍒 🍎 🍐 🍇 🍑 🫐</div>
-          <div class="landing-highlight-sub">さくらんぼ・りんご・梨・ぶどう・桃・ブルーベリー</div>
-        </div>
-        <div class="landing-highlight-card">
-          <div class="landing-highlight-head">収穫体験あり</div>
-          <div class="landing-highlight-main">複数農園</div>
-          <div class="landing-highlight-sub">さくらんぼ・りんご・ぶどうなどに対応</div>
-        </div>
-        <div class="landing-highlight-card">
-          <div class="landing-highlight-head">加工品</div>
-          <div class="landing-highlight-main">ジュース・ジャム・パイ</div>
-          <div class="landing-highlight-sub">現地ならではの加工品情報も掲載</div>
-        </div>
-      </div>
+  <div class="landing-highlight-card">
+    <div class="landing-highlight-head">代表的な果物</div>
+    <div class="landing-highlight-main" id="landing-fruit-emojis">--</div>
+    <div class="landing-highlight-sub" id="landing-fruit-names">--</div>
+  </div>
+  <div class="landing-highlight-card">
+    <div class="landing-highlight-head">収穫体験あり</div>
+    <div class="landing-highlight-main" id="landing-picking-count">--</div>
+    <div class="landing-highlight-sub" id="landing-picking-text">--</div>
+  </div>
+  <div class="landing-highlight-card">
+    <div class="landing-highlight-head">加工品</div>
+    <div class="landing-highlight-main" id="landing-products-main">--</div>
+    <div class="landing-highlight-sub" id="landing-products-sub">--</div>
+  </div>
+</div>
 
       <div class="landing-actions">
         <button id="enter-map-btn" class="landing-enter-btn">マップを見る / Enter Map</button>
@@ -696,11 +696,12 @@ function loadData() {
   }, 10000);
 
   window._cb = function(data) {
-    clearTimeout(timeout);
-    allData = data;
-    renderMarkers(data);
-    document.getElementById('loading').style.display = 'none';
-  };
+  clearTimeout(timeout);
+  allData = data;
+  renderMarkers(data);
+  buildLandingFromData(data);
+  document.getElementById('loading').style.display = 'none';
+};
   var s = document.createElement('script');
   s.src = GAS_URL + '?sheet=orchards&callback=_cb';
   s.onerror = function() {
@@ -848,7 +849,86 @@ function toggleLegend() {
   btn.style.color = isOpen ? '#333' : '#fff';
   btn.style.borderColor = isOpen ? '#ddd' : '#2e7d50';
 }
+function splitCsvValues(str) {
+  if (!str) return [];
+  return String(str)
+    .split(',')
+    .map(function(v) { return v.trim(); })
+    .filter(Boolean);
+}
 
+function buildLandingFromData(data) {
+  var orchards = data.filter(function(item) {
+    return item.category === 'orchard';
+  });
+
+  var fruitSet = {};
+  var productSet = {};
+  var pickingOrchards = 0;
+  var seasonMin = 12;
+  var seasonMax = 1;
+
+  orchards.forEach(function(item) {
+    splitCsvValues(item.crops).forEach(function(crop) {
+      fruitSet[crop] = true;
+    });
+
+    splitCsvValues(item.products).forEach(function(product) {
+      productSet[product] = true;
+    });
+
+    if (item.picking && item.picking.trim() && item.picking.trim() !== 'なし') {
+      pickingOrchards++;
+    }
+
+    var season = String(item.season || '');
+    var range = season.match(/(\d+)月[〜~～\-](\d+)月/);
+    if (range) {
+      var start = parseInt(range[1], 10);
+      var end = parseInt(range[2], 10);
+      if (start < seasonMin) seasonMin = start;
+      if (end > seasonMax) seasonMax = end;
+    } else {
+      var single = season.match(/(\d+)月/g);
+      if (single) {
+        single.forEach(function(m) {
+          var num = parseInt(m, 10);
+          if (num < seasonMin) seasonMin = num;
+          if (num > seasonMax) seasonMax = num;
+        });
+      }
+    }
+  });
+
+  var fruits = Object.keys(fruitSet);
+  var products = Object.keys(productSet);
+
+  var emojiLine = fruits.slice(0, 6).map(function(fruit) {
+    return CROP_EMOJI[fruit] || '🌿';
+  }).join(' ');
+
+  document.getElementById('landing-stat-orchards').textContent = orchards.length;
+  document.getElementById('landing-stat-fruits').textContent = fruits.length;
+  document.getElementById('landing-stat-season').textContent =
+    (seasonMin <= seasonMax) ? (seasonMin + '–' + seasonMax + '月') : '--';
+
+  document.getElementById('landing-fruit-emojis').textContent = emojiLine || '🍎 🍇 🍒';
+  document.getElementById('landing-fruit-names').textContent =
+    fruits.slice(0, 6).join('・') || '果物情報準備中';
+
+  document.getElementById('landing-picking-count').textContent = pickingOrchards + '農園';
+  document.getElementById('landing-picking-text').textContent =
+    pickingOrchards > 0
+      ? '収穫体験ができる果樹園を掲載'
+      : '現在、収穫体験情報を整理中';
+
+  document.getElementById('landing-products-main').textContent =
+    products.slice(0, 3).join('・') || '加工品情報あり';
+  document.getElementById('landing-products-sub').textContent =
+    products.length > 0
+      ? 'ジュース・ジャム・パイなどの加工品情報を掲載'
+      : '現地販売・加工品情報を順次追加予定';
+}
 function enterMap() {
   var landing = document.getElementById('landing-screen');
   if (landing) landing.style.display = 'none';
